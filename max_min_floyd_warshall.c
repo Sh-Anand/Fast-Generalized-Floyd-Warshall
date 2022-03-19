@@ -21,9 +21,10 @@ void initialize_matrix(double* adj, int n){
 }
 
 int main(){
-    int n = 10;
+    int n = 100;
     double* adj = (double *)malloc(n*n*sizeof(double));
     initialize_matrix(adj, n);
+
     for (size_t k = 0; k < n; k++){
         for (size_t i = 0; i < n; i++){
             for (size_t j = 0; j < n; j++){
