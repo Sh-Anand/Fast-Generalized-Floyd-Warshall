@@ -1,7 +1,14 @@
 //code largely repurposed from HW1
 //#error Please comment out the next two lines under linux, then comment this error
 //#include "stdafx.h"  //Visual studio expects this line to be the first one, comment out if different compiler
+#ifdef _WIN32
 #include <windows.h> // Include if under windows
+#endif
+
+#ifdef linux
+#define min(X, Y)  ((X) < (Y) ? (X) : (Y))
+#define max(X, Y)  ((X) > (Y) ? (X) : (Y))
+#endif
 
 #ifndef WIN32
 #include <sys/time.h>
@@ -20,7 +27,9 @@
 #define CALIBRATE
 #define ZERO_PROBABILITY 10 //1/ZERO_PROBABILITY is the probability of an entry in the bit matrix being zero
 
-void fw_max_min(double C[], int n) {
+volatile double *C;
+
+void fw_max_min(int n) {
     for (size_t k = 0; k < n; k++) {
         for (size_t i = 0; i < n; i++) {
             for (size_t j = 0; j < n; j++) {
@@ -30,7 +39,7 @@ void fw_max_min(double C[], int n) {
     }
 }
 
-void fw_min_plus(double C[], int n) {
+void fw_min_plus(int n) {
     for (size_t k = 0; k < n; k++) {
         for (size_t i = 0; i < n; i++) {
             for (size_t j = 0; j < n; j++) {
@@ -41,7 +50,7 @@ void fw_min_plus(double C[], int n) {
 }
 
 //extremely inefficient to cast at every iteration, find fix with minimal code duplication!
-void fw_or_and(double C[], int n) {
+void fw_or_and(int n) {
     for (size_t k = 0; k < n; k++) {
         for (size_t i = 0; i < n; i++) {
             for (size_t j = 0; j < n; j++) {
@@ -51,18 +60,18 @@ void fw_or_and(double C[], int n) {
     }
 }
 
-void init_matrix(double* adj, int n) {
+void init_matrix(int n) {
     for (size_t i = 0; i < n; i++) {
         for (size_t j = 0; j < n; j++) {
-            adj[i * n + j] = ((double )rand() + 1)/RAND_MAX;
+            C[i * n + j] = ((double )rand() + 1)/RAND_MAX;
         }
     }   
 }
 
-void init_bit_matrix(double *adj, int n) {
+void init_bit_matrix(int n) {
     for (size_t i = 0; i < n; i++) {
         for (size_t j = 0; j < n; j++) {
-            adj[i * n + j] = (rand() % ZERO_PROBABILITY);
+            C[i * n + j] = (rand() % ZERO_PROBABILITY);
         }
     }   
 }
@@ -71,7 +80,7 @@ void init_bit_matrix(double *adj, int n) {
  * Timing function based on the TimeStep Counter of the CPU.
  */
 #ifdef __x86_64__
-double rdtsc(double *C, int n, void (*compute)(double*, int)) {
+double rdtsc(int n, void (*compute)(int)) {
     int i, num_runs;
     myInt64 cycles;
     myInt64 start;
@@ -87,7 +96,7 @@ double rdtsc(double *C, int n, void (*compute)(double*, int)) {
     while(num_runs < (1 << 14)) {
         start = start_tsc();
         for (i = 0; i < num_runs; ++i) {
-            compute(C, n);
+            compute(n);
         }
         cycles = stop_tsc(start);
 
@@ -99,7 +108,7 @@ double rdtsc(double *C, int n, void (*compute)(double*, int)) {
 
     start = start_tsc();
     for (i = 0; i < num_runs; ++i) {
-        compute(C, n);
+        compute(n);
     }
 
     cycles = stop_tsc(start)/num_runs;
@@ -109,13 +118,13 @@ double rdtsc(double *C, int n, void (*compute)(double*, int)) {
 
 //If you want to use a different timer, simply call this function with a different timer function
 //Written like this to enable future extensions
-double benchmark(double* C, int n, void (*init_matrix) (double *, int), double (*timer) (double *, int, void (double*, int)), void (*compute)(double*, int)) {
-    init_matrix(C, n);
-    return timer(C, n, compute);
+double benchmark(int n, void (*init_matrix) (int), double (*timer) (int, void (int)), void (*compute)(int)) {
+    init_matrix(n);
+    return timer(n, compute);
 }
 
-static void (*fw[3]) (double[], int) = {fw_min_plus, fw_or_and, fw_max_min};
-static void (*init[3])(double*, int) = {init_matrix, init_bit_matrix, init_matrix};
+static void (*fw[3]) (int) = {fw_min_plus, fw_or_and, fw_max_min};
+static void (*init[3])(int) = {init_matrix, init_bit_matrix, init_matrix};
 static char msg[3][10] = {"(min, +)", "(and, or)", "(max, min)"};
 
 int main(int argc, char **argv) {
@@ -123,14 +132,17 @@ int main(int argc, char **argv) {
     int n = atoi(argv[1]);
     int fwi = atoi(argv[2]);
     printf("n=%d \n",n);
-    double* C = (double *)malloc(n*n*sizeof(double));
-    double* C_bit = (double *)malloc(n*n*sizeof(double));
+    C = (double *)malloc(n*n*sizeof(double));
 
 #ifdef __x86_64__
-    double r = benchmark(C, n, init[fwi], rdtsc, fw[fwi]);
-    printf(msg[fwi]);
+    double r = benchmark(n, init[fwi], rdtsc, fw[fwi]);
+    printf("%s\n", msg[fwi]);
     printf(" FW : RDTSC instruction:\n %lf cycles measured\n\n", r);
 #endif
+
+    for(int i = 0; i < n; i++)
+        for(int j = 0; j < n; j++)
+            printf("%lf", C[n*i + j]);
 
     return 0;
 }
