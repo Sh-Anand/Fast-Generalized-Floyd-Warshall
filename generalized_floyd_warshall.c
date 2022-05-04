@@ -27,13 +27,13 @@
 #define CALIBRATE
 #define ZERO_PROBABILITY 10 //1/ZERO_PROBABILITY is the probability of an entry in the bit matrix being zero
 
-volatile double *C;
+double *C;
 
 void fw_max_min(int n) {
     for (size_t k = 0; k < n; k++) {
         for (size_t i = 0; i < n; i++) {
             for (size_t j = 0; j < n; j++) {
-                C[i*n + j] = max(C[i*n + j], min(C[i*n + j], C[i*n + j]));
+                C[i*n + j] = max(C[i*n + j], min(C[i*n + k], C[k*n + j]));
             }
         }
     }
@@ -43,7 +43,7 @@ void fw_min_plus(int n) {
     for (size_t k = 0; k < n; k++) {
         for (size_t i = 0; i < n; i++) {
             for (size_t j = 0; j < n; j++) {
-                C[i*n + j] = min(C[i*n + j], C[i*n + j] + C[i*n + j]);
+                C[i*n + j] = min(C[i*n + j], C[i*n + k] + C[k*n + j]);
             }
         }
     }
@@ -54,7 +54,7 @@ void fw_or_and(int n) {
     for (size_t k = 0; k < n; k++) {
         for (size_t i = 0; i < n; i++) {
             for (size_t j = 0; j < n; j++) {
-                C[i*n + j] = (int) C[i*n + j] | ((int)C[i*n + j] & (int)C[i*n + j]);
+                C[i*n + j] = (int) C[i*n + j] | ((int)C[i*n + k] & (int)C[k*n + j]);
             }
         }
     }
