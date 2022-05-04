@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <immintrin.h>
 
 #ifdef __x86_64__
 #include "tsc_x86.h"
@@ -45,6 +46,33 @@ void fw_min_plus(int n) {
             for (size_t j = 0; j < n; j++) {
                 C[i*n + j] = min(C[i*n + j], C[i*n + k] + C[k*n + j]);
             }
+        }
+    }
+}
+
+void opt_fw_min_plus(double C[], int n) {
+    int i_n = 0;
+
+    double *c_addr = &C[0], *addr_ij, *addr_ik, *addr_kj;
+    __m256d c_ij, c_ik, c_kj, c2, cmp_lt, res;
+    for (size_t k = 0; k < n; k++) {
+        for (size_t i = 0; i < n; i++) {
+            for (size_t j = 0; j < n; j+=4) {
+                addr_ij = c_addr + sizeof(double) * (i_n + j);
+                addr_ik = c_addr + sizeof(double) * (i_n + k);
+                addr_kj = c_addr + sizeof(double) * (k*n + j);
+                
+                c_ij = _mm256_load_pd(addr_ij);
+                c_ik = _mm256_load_pd(addr_ik);
+                c_kj = _mm256_load_pd(addr_kj);
+
+                c2 = _mm256_add_pd(c_ik, c_kj);
+                // Compute min
+                cmp_lt = _mm256_cmp_pd(c_ij, c2, _CMP_LT_OQ);
+                res = _mm256_blendv_pd(c2, c_ij, cmp_lt);
+                _mm256_store_pd(addr_ij, res);
+            }
+            i_n += n;
         }
     }
 }
