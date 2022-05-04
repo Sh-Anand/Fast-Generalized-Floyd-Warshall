@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <inttypes.h>
 
 #ifdef __x86_64__
 #include "tsc_x86.h"
@@ -27,13 +28,18 @@
 #define CALIBRATE
 #define ZERO_PROBABILITY 10 //1/ZERO_PROBABILITY is the probability of an entry in the bit matrix being zero
 
-double *C;
+typedef union {
+    double d;
+    uint64_t u;
+} double_bin_t;
+
+double_bin_t *C;
 
 void fw_max_min(int n) {
     for (size_t k = 0; k < n; k++) {
         for (size_t i = 0; i < n; i++) {
             for (size_t j = 0; j < n; j++) {
-                C[i*n + j] = max(C[i*n + j], min(C[i*n + k], C[k*n + j]));
+                C[i*n + j].d = max(C[i*n + j].d, min(C[i*n + k].d, C[k*n + j].d));
             }
         }
     }
@@ -43,18 +49,17 @@ void fw_min_plus(int n) {
     for (size_t k = 0; k < n; k++) {
         for (size_t i = 0; i < n; i++) {
             for (size_t j = 0; j < n; j++) {
-                C[i*n + j] = min(C[i*n + j], C[i*n + k] + C[k*n + j]);
+                C[i*n + j].d = min(C[i*n + j].d, C[i*n + k].d + C[k*n + j].d);
             }
         }
     }
 }
 
-//extremely inefficient to cast at every iteration, find fix with minimal code duplication!
 void fw_or_and(int n) {
     for (size_t k = 0; k < n; k++) {
         for (size_t i = 0; i < n; i++) {
             for (size_t j = 0; j < n; j++) {
-                C[i*n + j] = (int) C[i*n + j] | ((int)C[i*n + k] & (int)C[k*n + j]);
+                C[i*n + j].u = C[i*n + j].u | (C[i*n + k].u & C[k*n + j].u);
             }
         }
     }
@@ -63,7 +68,7 @@ void fw_or_and(int n) {
 void init_matrix(int n) {
     for (size_t i = 0; i < n; i++) {
         for (size_t j = 0; j < n; j++) {
-            C[i * n + j] = ((double )rand() + 1)/RAND_MAX;
+            C[i * n + j].d = ((double )rand() + 1)/RAND_MAX;
         }
     }   
 }
@@ -71,7 +76,7 @@ void init_matrix(int n) {
 void init_bit_matrix(int n) {
     for (size_t i = 0; i < n; i++) {
         for (size_t j = 0; j < n; j++) {
-            C[i * n + j] = (rand() % ZERO_PROBABILITY);
+            C[i * n + j].d = (rand() % ZERO_PROBABILITY);
         }
     }   
 }
@@ -132,7 +137,7 @@ int main(int argc, char **argv) {
     int n = atoi(argv[1]);
     int fwi = atoi(argv[2]);
     printf("n=%d \n",n);
-    C = (double *)malloc(n*n*sizeof(double));
+    C = (double_bin_t *)malloc(n*n*sizeof(double));
 
 #ifdef __x86_64__
     double r = benchmark(n, init[fwi], rdtsc, fw[fwi]);
@@ -142,7 +147,7 @@ int main(int argc, char **argv) {
 
     for(int i = 0; i < n; i++)
         for(int j = 0; j < n; j++)
-            printf("%lf", C[n*i + j]);
+            printf("%lf", C[n*i + j].d);
 
     return 0;
 }

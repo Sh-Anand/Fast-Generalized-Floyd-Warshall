@@ -13,7 +13,7 @@ except Exception as err:
 
 compiled_file = "./a" + (".exe " if system() == "Windows" else ".out ") #do not remove space
 
-start, end, step = 10,100,10 #from n = start, to n = end, in steps of step
+start, end, step = 10,250,10 #from n = start, to n = end, in steps of step
 repetitions_for_confidence = 10 #number of repetitions of each n, median is taken
 file_name = "generalized_floyd_warshall.c " #do not remove space after the end!
 
