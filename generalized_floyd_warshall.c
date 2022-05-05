@@ -94,6 +94,70 @@ void fw_or_and(int n) {
     }
 }
 
+void opt_fw_or_and_256(double C[], int n) {
+    int i_n = 0;
+
+    double *c_addr = &C[0], *addr_ij, *addr_ik, *addr_kj;
+    __m256d c_ij, c_ik, c_kj, c2, cmp_lt, res;
+    for (size_t k = 0; k < n; k++) {
+        for (size_t i = 0; i < n; i++) {
+            size_t j = 0;
+            for (; j < n; j+=4) {
+                addr_ij = c_addr + sizeof(double) * (i_n + j);
+                addr_ik = c_addr + sizeof(double) * (i_n + k);
+                addr_kj = c_addr + sizeof(double) * (k*n + j);
+                
+                c_ij = _mm256_load_pd(addr_ij);
+                c_ik = _mm256_load_pd(addr_ik);
+                c_kj = _mm256_load_pd(addr_kj);
+
+                c2 = _mm256_and_pd(c_ik, c_kj);
+                res = _mm256_or_pd(c_ij, c2);
+                _mm256_store_pd(addr_ij, res);
+            }
+            for(;j < n; j++){
+                u_int64_t c_ij_bits = *(u_int64_t *)(&C[i_n + j]);
+                u_int64_t c_ik_bits = *(u_int64_t *)(&C[i_n + k]);
+                u_int64_t c_kj_bits = *(u_int64_t *)(&C[k*n + j]);
+                C[i_n + j] = c_ij_bits | (c_ik_bits & c_kj_bits); //maybe is wrong cause it gets converted to double
+            }
+            i_n += n;
+        }
+    }
+}
+
+void opt_fw_or_and_512(double C[], int n) {
+    int i_n = 0;
+
+    double *c_addr = &C[0], *addr_ij, *addr_ik, *addr_kj;
+    __m512d c_ij, c_ik, c_kj, c2, cmp_lt, res;
+    for (size_t k = 0; k < n; k++) {
+        for (size_t i = 0; i < n; i++) {
+            size_t j = 0;
+            for (; j < n; j+=8) {
+                addr_ij = c_addr + sizeof(double) * (i_n + j);
+                addr_ik = c_addr + sizeof(double) * (i_n + k);
+                addr_kj = c_addr + sizeof(double) * (k*n + j);
+                
+                c_ij = _mm512_load_pd(addr_ij);
+                c_ik = _mm512_load_pd(addr_ik);
+                c_kj = _mm512_load_pd(addr_kj);
+
+                c2 = _mm512_and_pd(c_ik, c_kj);
+                res = _mm512_or_pd(c_ij, c2);
+                _mm512_store_pd(addr_ij, res);
+            }
+            for(;j < n; j++){
+                u_int64_t c_ij_bits = *(u_int64_t *)(&C[i_n + j]);
+                u_int64_t c_ik_bits = *(u_int64_t *)(&C[i_n + k]);
+                u_int64_t c_kj_bits = *(u_int64_t *)(&C[k*n + j]);
+                C[i_n + j] = c_ij_bits | (c_ik_bits & c_kj_bits); //maybe is wrong cause it gets converted to double
+            }
+            i_n += n;
+        }
+    }
+}
+
 void init_matrix(int n) {
     for (size_t i = 0; i < n; i++) {
         for (size_t j = 0; j < n; j++) {
