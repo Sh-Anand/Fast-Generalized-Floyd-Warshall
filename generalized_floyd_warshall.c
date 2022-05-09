@@ -1,19 +1,16 @@
 //code largely repurposed from HW1
 //#error Please comment out the next two lines under linux, then comment this error
 //#include "stdafx.h"  //Visual studio expects this line to be the first one, comment out if different compiler
-#include <stdint.h>
-#ifdef _WIN32
-#include <windows.h> // Include if under windows
-#endif
 
 #ifdef linux
 #define min(X, Y)  ((X) < (Y) ? (X) : (Y))
 #define max(X, Y)  ((X) > (Y) ? (X) : (Y))
 #endif
 
-#ifndef WIN32
-#include <sys/time.h>
-#endif
+// #ifndef WIN32
+// #include <sys/time.h>
+// #include <windows.h> 
+// #endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
@@ -115,6 +112,40 @@ void vect_fw_min_plus(double *C, int n) {
     }
 }
 
+void opt_fw_max_min(double *C, int n) {
+    int i_n = 0;
+
+    double *c_addr = C, *addr_ij, *addr_ik, *addr_kj;
+    __m256d c_ij, c_ik, c_kj, c2, cmp_lt, cmp_gt, res;
+
+    for (size_t k = 0; k < n; k++) {
+        for (size_t i = 0; i < n; i++) {
+            size_t j = 0;
+            for (; j < n; j+=4) {
+                addr_ij = c_addr + sizeof(double) * (i_n + j);
+                addr_ik = c_addr + sizeof(double) * (i_n + k);
+                addr_kj = c_addr + sizeof(double) * (k*n + j);
+
+                c_ij = _mm256_load_pd(addr_ij);
+                c_kj = _mm256_load_pd(addr_kj);
+                 
+                // Compute min
+                cmp_lt = _mm256_cmp_pd(c_ik, c_kj, _CMP_LT_OQ);
+                c2 = _mm256_blendv_pd(c_kj, c_ik, cmp_lt);
+                   
+                // Compute min
+                cmp_gt = _mm256_cmp_pd(c_ij, c2, _CMP_GT_OQ);
+                res = _mm256_blendv_pd(c2, c_ij, cmp_gt);
+                _mm256_store_pd(addr_ij, res);
+            }
+            for (; j < n; j++) {
+                C[i*n + j] = max(C[i*n + j], min(C[i*n + k], C[k*n + j]));
+            }
+            i_n += n;
+        }
+    }
+}
+
 //extremely inefficient to cast at every iteration, find fix with minimal code duplication!
 void fw_or_and(double *C, int n) {
     for (size_t k = 0; k < n; k++) {
@@ -133,8 +164,7 @@ void opt_fw_or_and_256(double *C, int n) {
     __m256d c_ij, c_ik, c_kj, c2, cmp_lt, res;
     for (size_t k = 0; k < n; k++) {
         for (size_t i = 0; i < n; i++) {
-            size_t j = 0;
-            for (; j < n; j+=4) {
+            for (size_t j = 0; j < n; j+=4) {
                 addr_ij = c_addr + sizeof(double) * (i_n + j);
                 addr_ik = c_addr + sizeof(double) * (i_n + k);
                 addr_kj = c_addr + sizeof(double) * (k*n + j);
@@ -143,15 +173,11 @@ void opt_fw_or_and_256(double *C, int n) {
                 c_ik = _mm256_load_pd(addr_ik);
                 c_kj = _mm256_load_pd(addr_kj);
 
-                c2 = _mm256_and_pd(c_ik, c_kj);
-                res = _mm256_or_pd(c_ij, c2);
+                c2 = _mm256_add_pd(c_ik, c_kj);
+                // Compute min
+                cmp_lt = _mm256_cmp_pd(c_ij, c2, _CMP_LT_OQ);
+                res = _mm256_blendv_pd(c2, c_ij, cmp_lt);
                 _mm256_store_pd(addr_ij, res);
-            }
-            for(;j < n; j++){
-                u_int64_t c_ij_bits = *(u_int64_t *)(&C[i_n + j]);
-                u_int64_t c_ik_bits = *(u_int64_t *)(&C[i_n + k]);
-                u_int64_t c_kj_bits = *(u_int64_t *)(&C[k*n + j]);
-                C[i_n + j] = c_ij_bits | (c_ik_bits & c_kj_bits); //maybe is wrong cause it gets converted to double
             }
             i_n += n;
         }
