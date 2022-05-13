@@ -84,6 +84,36 @@ void basic_opt_fw_min_plus(double *C, int n) {
     }
 }
 
+void blocked_fw_min_plus(double *C, int n, int Bi, int Bj, int Bk) {
+    int ipn = 0;
+    int kpn = 0;
+    int ipnplusjp = 0;
+    double c_ipnpluskp = 0.0;
+    double c_kpnplusjp = 0.0;
+    double c_0pc_1 = 0.0;
+    double min_c = 0.0;
+    for (int k = 0; k < n; k += Bk) {
+        for (int i = 0; i < n; i += Bi) {
+            for (int j = 0; j < n; j += Bj) {
+                for(int kp = 0; kp < Bk; ++kp) {
+                    kpn = kp * n;
+                    for(int ip = 0; ip < Bi; ++ip) {
+                        ipn = ip * n;
+                        c_ipnpluskp = C[ipn + kp];
+                        for(int jp = 0; jp < Bp; ++jp) {
+                            ipnplusjp = ipn + jp;
+                            c_kpnplusjp = C[kpn + jp];
+                            c_0pc_1 = c_ipnpluskp + c_kpnplusjp;
+                            min_c =  min(C[ipnplusjp], c_0pc_1);
+                            C[ipnplusjp] = min_c;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 void vect_fw_min_plus(double *C, int n) {
     int i_n = 0;
 
@@ -290,6 +320,36 @@ double benchmark(double* C, int n, void (*init_matrix) (double*, int), double (*
     return timer(C, n, compute);
 }
 
+void test_blocked(int n, void (*baseline)(double*, int), void (*optimization)(double*, int, int, int, int)) {
+    double *C_base = (double *)malloc(n*n*sizeof(double));
+    double *C_opt = (double *)malloc(n*n*sizeof(double));
+    init_matrices(C_base, C_opt, n);
+    // Run baseline function on C
+    baseline(C_base, n);
+
+    int Bi, Bj, Bk;
+    Bi = n/4;
+    Bj = n/4;
+    bk = n/4;
+    // Run optimized function on C
+    optimization(C_opt, n, Bi, Bj, Bk);
+
+    for(int i = 0; i < n; i++) {
+        for(int j = 0; j < n; j++) {
+            printf("base[%d][%d] = %lf ", i, j, C_base[n*i + j]);
+            printf("opt[%d][%d] = %lf\n", i, j, C_opt[n*i + j]);
+        }
+    }
+    
+    // Compare both
+    for(int i = 0; i < n; ++i) {
+        assert(C_opt[i] == C_base[i]);
+    }
+
+    free(C_base);
+    free(C_opt);
+}
+
 void test(int n, void (*baseline)(double*, int), void (*optimization)(double*, int)) {
     double *C_base = (double *)malloc(n*n*sizeof(double));
     double *C_opt = (double *)malloc(n*n*sizeof(double));
@@ -336,7 +396,7 @@ int main(int argc, char **argv) {
         for(int j = 0; j < n; j++)
             printf("%lf", C[n*i + j]);
 
-    // test(n, fw_min_plus, basic_opt_fw_min_plus);
+    test_blocked(n, fw_min_plus, blocked_fw_min_plus);
 
     free(C);
 
