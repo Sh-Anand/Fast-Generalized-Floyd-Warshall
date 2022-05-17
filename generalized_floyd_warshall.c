@@ -100,7 +100,7 @@ void blocked_fw_min_plus(double *C, int n, int Bi, int Bj, int Bk) {
                     for(int ip = 0; ip < Bi; ++ip) {
                         ipn = ip * n;
                         c_ipnpluskp = C[ipn + kp];
-                        for(int jp = 0; jp < Bp; ++jp) {
+                        for(int jp = 0; jp < Bj; ++jp) {
                             ipnplusjp = ipn + jp;
                             c_kpnplusjp = C[kpn + jp];
                             c_0pc_1 = c_ipnpluskp + c_kpnplusjp;
@@ -330,7 +330,7 @@ void test_blocked(int n, void (*baseline)(double*, int), void (*optimization)(do
     int Bi, Bj, Bk;
     Bi = n/4;
     Bj = n/4;
-    bk = n/4;
+    Bk = n/4;
     // Run optimized function on C
     optimization(C_opt, n, Bi, Bj, Bk);
 
