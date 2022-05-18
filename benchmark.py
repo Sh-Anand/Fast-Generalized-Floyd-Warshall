@@ -25,14 +25,14 @@ for fwi in range(len(fw)):
     print("Benchmarking " + str(fw[fwi]))
     plt.clf()
     for flag in flags:
-        run("gcc " + file_name + flag, shell=True)
+        run("gcc -mavx -w " + file_name + flag, shell=True)
         x = []
         y = []
         for n in range(start, end, step):
             flops_per_cycle = []
             for i in range(repetitions_for_confidence):
         
-                output = run("./a.out " +str(n)+" "+str(fwi), capture_output=True, shell=True).stdout.decode("utf-8")
+                output = run("./a.exe " +str(n)+" "+str(fwi), capture_output=True).stdout.decode("utf-8")
 
                 cycles = [float(t) for t in output.split() if re.match(r'^-?\d+(?:\.\d+)$', t) is not None][0]
                 # print(cycles)

@@ -53,7 +53,7 @@ void fw_abc_min_plus(double* A, double* B, double* C, int n) {
     for (size_t k = 0; k < n; k++) {
         for (size_t i = 0; i < n; i++) {
             for (size_t j = 0; j < n; j++) {
-                C[i*n + j] = min(C[i*n + j], C[i*n + k] + C[k*n + j]);
+                C[i*n + j] = min(C[i*n + j], A[i*n + k] + B[k*n + j]);
             }
         }
     }
@@ -155,22 +155,23 @@ void basic_fwi_min_plus(double* A, double* B, double *C, int n, int Bi, int Bj) 
 }
 
 void fwi_phase1_min_plus(double* A, double* B, double* C, int n, int l, int m, int L1, int Bi, int Bj) {
-    int sub_base_l = (l - 1) * L1;
-    int sub_base_m = (m - 1) * L1;
+    printf("Phase 1\n");
+    int sub_base_l = l * L1;
+    int sub_base_m = m * L1;
     for (int k = 0; k < L1; ++k) {
         for (int i = 0; i < L1; i += Bi) {
             for (int j = 0; j < L1; j += Bj) {
                 for(int ip = i; ip < i + Bi; ++ip) {
                     for(int jp = j; jp < j + Bj; ++jp) {
                         //Sanity check
-                        //assert(((ip + sub_base_l) * L1) + (jp + sub_base_m) < n);
-                        //assert(((ip + sub_base_l) * L1) + (k + sub_base_m) < n);
-                        //assert(((k + sub_base_l) * L1) + (jp + sub_base_m) < n);
+                        assert(((ip + sub_base_l) * n) + (jp + sub_base_m) < n*n);
+                        assert(((ip + sub_base_l) * n) + (k + sub_base_m) < n*n);
+                        assert(((k + sub_base_l) * n) + (jp + sub_base_m) < n*n);
 
+                        printf("Touching C[%d][%d], A[%d][%d], B[%d][%d]\n", (ip + sub_base_l), (jp + sub_base_m), (ip + sub_base_l), (k + sub_base_m), (k + sub_base_l), (jp + sub_base_m));
                         C[((ip + sub_base_l) * n) + (jp + sub_base_m)] = min(
                             C[((ip + sub_base_l) * n) + (jp + sub_base_m)], 
-                            A[((ip + sub_base_l) * n) + (k + sub_base_m)] + 
-                                B[((k + sub_base_l) * n) + (jp + sub_base_m)]
+                            (A[((ip + sub_base_l) * n) + (k + sub_base_m)] + B[((k + sub_base_l) * n) + (jp + sub_base_m)])
                         );
                     }
                 }
@@ -180,17 +181,17 @@ void fwi_phase1_min_plus(double* A, double* B, double* C, int n, int l, int m, i
 }
 
 void fwi_phase2_min_plus(double* A, double* B, double* C, int n, int l, int m, int L1, int Bi, int Bj) {
-    int sub_base_l = (l - 1) * L1;
-    int sub_base_m = (m - 1) * L1;
+    int sub_base_l = l * L1;
+    int sub_base_m = m * L1;
     for (int k = 0; k < L1; ++k) {
         for (int i = 0; i < L1; i += Bi) {
             for (int j = 0; j < L1; j += Bj) {
                 for(int ip = i; ip < i + Bi; ++ip) {
                     for(int jp = j; jp < j + Bj; ++jp) {
                         //Sanity check
-                        //assert(((ip + sub_base_l) * L1) + (jp + sub_base_m) < n);
-                        //assert(((ip + sub_base_l) * L1) + (k + sub_base_l) < n);
-                        //assert(((k + sub_base_l) * L1) + (jp + sub_base_m) < n);
+                        assert(((ip + sub_base_l) * n) + (jp + sub_base_m) < n*n);
+                        assert(((ip + sub_base_l) * n) + (k + sub_base_l) < n*n);
+                        assert(((k + sub_base_l) * n) + (jp + sub_base_m) < n*n);
 
                         C[((ip + sub_base_l) * n) + (jp + sub_base_m)] = min(
                             C[((ip + sub_base_l) * n) + (jp + sub_base_m)], 
@@ -205,17 +206,17 @@ void fwi_phase2_min_plus(double* A, double* B, double* C, int n, int l, int m, i
 }
 
 void fwi_phase3_min_plus(double* A, double* B, double* C, int n, int l, int m, int L1, int Bi, int Bj) {
-    int sub_base_l = (l - 1) * L1;
-    int sub_base_m = (m - 1) * L1;
+    int sub_base_l = l * L1;
+    int sub_base_m = m * L1;
     for (int k = 0; k < L1; ++k) {
         for (int i = 0; i < L1; i += Bi) {
             for (int j = 0; j < L1; j += Bj) {
                 for(int ip = i; ip < i + Bi; ++ip) {
                     for(int jp = j; jp < j + Bj; ++jp) {
                         //Sanity check
-                        //assert(((ip + sub_base_m) * L1) + (jp + sub_base_l) < n);
-                        //assert(((ip + sub_base_m) * L1) + (k + sub_base_l) < n);
-                        //assert(((k + sub_base_l) * L1) + (jp + sub_base_l) < n);
+                        assert(((ip + sub_base_m) * n) + (jp + sub_base_l) < n*n);
+                        assert(((ip + sub_base_m) * n) + (k + sub_base_l) < n*n);
+                        assert(((k + sub_base_l) * n) + (jp + sub_base_l) < n*n);
 
                         C[((ip + sub_base_m) * n) + (jp + sub_base_l)] = min(
                             C[((ip + sub_base_m) * n) + (jp + sub_base_l)], 
@@ -240,9 +241,9 @@ void fwi_phase3_min_plus(double* A, double* B, double* C, int n, int l, int m, i
  * @param [Bi, Bj, Bk] tilling factors 
  */
 void fwi_abc_min_plus(double* A, double* B, double* C, int n, int l, int m, int o, int L1, int Bi, int Bj, int Bk) {
-    int sub_base_l = (l - 1) * L1;
-    int sub_base_m = (m - 1) * L1;
-    int sub_base_o = (o - 1) * L1;
+    int sub_base_l = l * L1;
+    int sub_base_m = m * L1;
+    int sub_base_o = o * L1;
     for (int i = 0; i < L1; i += Bi) {
         for (int j = 0; j < L1; j += Bj) {
             for (int k = 0; k < L1; k += Bk) {
@@ -250,9 +251,9 @@ void fwi_abc_min_plus(double* A, double* B, double* C, int n, int l, int m, int 
                     for(int jp = j; jp < j + Bj; ++jp) {
                         for(int kp = k; kp < k + Bk; ++kp) {
                             //Sanity check
-                            //assert(((ip + sub_base_m) * L1) + (jp + sub_base_o) < n);
-                            //assert(((ip + sub_base_m) * L1) + (kp + sub_base_l) < n);
-                            //assert(((kp + sub_base_l) * L1) + (jp + sub_base_o) < n);
+                            assert(((ip + sub_base_m) * n) + (jp + sub_base_o) < n*n);
+                            assert(((ip + sub_base_m) * n) + (kp + sub_base_l) < n*n);
+                            assert(((kp + sub_base_l) * n) + (jp + sub_base_o) < n*n);
                             C[((ip + sub_base_m) * n) + (jp + sub_base_o)] = min(
                             C[((ip + sub_base_m) * n) + (jp + sub_base_o)], 
                             A[((ip + sub_base_m) * n) + (kp + sub_base_l)] + 
@@ -354,6 +355,8 @@ void fwi_abc(double* A, double* B, double* C, int n, int Bi, int Bj, int Bk) {
  */
 void tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int Bi, int Bj, int Bk) {
     int m = n / L1;
+    printf("m = %d\n",m);
+    // assert(m==4);
     for(int k = 0; k < m; ++k) {
         //Tilling phase 1 (update C_kk)
         fwi_phase1_min_plus(A, B, C, n, k, k, L1, Bi, Bj);
@@ -646,18 +649,21 @@ void test_tiled(int n, void (*baseline)(double*, double*, double*, int),
     Bi = L1/4;
     Bj = L1/4;
     Bk = L1/4;
+
+    printf("L1 = %d\n", L1);
     
     // Run optimized function on C
     optimization(A_opt, B_opt, C_opt, L1, n, Bi, Bj, Bk);
 
+    printf("\n");
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < n; j++) {
             printf("base[%d][%d] = %lf ", i, j, C_base[n*i + j]);
             printf("opt[%d][%d] = %lf\n", i, j, C_opt[n*i + j]);
         }
     }
-    
-    // Compare both
+    printf("\n");
+    // Compare both 
     for(int i = 0; i < n*n; ++i) {
         assert(C_opt[i] == C_base[i]);
     }
@@ -716,6 +722,7 @@ int main(int argc, char **argv) {
         for(int j = 0; j < n; j++)
             printf("%lf", C[n*i + j]);
 
+    printf("\n");
     //test_blocked(n, fw_min_plus, opt_blocked_fw_min_plus);
     test_tiled(n, fw_abc_min_plus, tiled_fw_min_plus);
 
