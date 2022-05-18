@@ -22,7 +22,7 @@ clean:
 bench:
 	python3 benchmark.py
 
-min_plus: clean ffw
+min_plus: ffw
 	./ffw 256 0
 
 test_blocked: clean ffw_blocked
