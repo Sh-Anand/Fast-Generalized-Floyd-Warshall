@@ -84,35 +84,51 @@ void basic_opt_fw_min_plus(double *C, int n) {
     }
 }
 
-void blocked_fw_min_plus(double *C, int n, int Bi, int Bj, int Bk) {
-    int ipn = 0;
-    int kpn = 0;
-    int ipnplusjp = 0;
-    double c_ipnpluskp = 0.0;
-    double c_kpnplusjp = 0.0;
-    double c_0pc_1 = 0.0;
-    double min_c = 0.0;
-    for (int k = 0; k < n; k += Bk) {
+///////////////////////////BLOCKED MIN PLUS///////////////////////////
+
+void basic_blocked_fw_min_plus(double *C, int n, int Bi, int Bj, int Bk) {
+    for (int k = 0; k < n; ++k) {
         for (int i = 0; i < n; i += Bi) {
             for (int j = 0; j < n; j += Bj) {
-                for(int kp = 0; kp < Bk; ++kp) {
-                    kpn = kp * n;
-                    for(int ip = 0; ip < Bi; ++ip) {
-                        ipn = ip * n;
-                        c_ipnpluskp = C[ipn + kp];
-                        for(int jp = 0; jp < Bj; ++jp) {
-                            ipnplusjp = ipn + jp;
-                            c_kpnplusjp = C[kpn + jp];
-                            c_0pc_1 = c_ipnpluskp + c_kpnplusjp;
-                            min_c =  min(C[ipnplusjp], c_0pc_1);
-                            C[ipnplusjp] = min_c;
-                        }
+                for(int ip = i; ip < i + Bi; ++ip) {
+                    for(int jp = j; jp < j + Bj; ++jp) {
+                        C[(ip * n) + jp] =  min(C[ip * n + jp], C[ip * n + k] + C[k * n + jp]);
                     }
                 }
             }
         }
     }
 }
+
+void opt_blocked_fw_min_plus(double *C, int n, int Bi, int Bj, int Bk) {
+    int ipn = 0;
+    int kn = 0;
+    int ipnplusjp = 0;
+    double c_ipnpluskp = 0.0;
+    double c_kpnplusjp = 0.0;
+    double c_0pc_1 = 0.0;
+    double min_c = 0.0;
+    for (int k = 0; k < n; ++k) {
+        for (int i = 0; i < n; i += Bi) {
+            for (int j = 0; j < n; j += Bj) {
+                kn = k * n;
+                for(int ip = i; ip < i + Bi; ++ip) {
+                    ipn = ip * n;
+                    c_ipnpluskp = C[ipn + k];
+                    for(int jp = j; jp < j + Bj; ++jp) {
+                        ipnplusjp = ipn + jp;
+                        c_kpnplusjp = C[kn + jp];
+                        c_0pc_1 = c_ipnpluskp + c_kpnplusjp;
+                        min_c =  min(C[ipnplusjp], c_0pc_1);
+                        C[ipnplusjp] = min_c;
+                    }
+                }
+            }
+        }
+    }
+}
+
+//////////////////////VECT MIN PLUS//////////////////////
 
 void vect_fw_min_plus(double *C, int n) {
     int i_n = 0;
@@ -396,7 +412,7 @@ int main(int argc, char **argv) {
         for(int j = 0; j < n; j++)
             printf("%lf", C[n*i + j]);
 
-    test_blocked(n, fw_min_plus, blocked_fw_min_plus);
+    test_blocked(n, fw_min_plus, opt_blocked_fw_min_plus);
 
     free(C);
 
