@@ -155,7 +155,7 @@ void basic_fwi_min_plus(double* A, double* B, double *C, int n, int Bi, int Bj) 
 }
 
 void fwi_phase1_min_plus(double* A, double* B, double* C, int n, int l, int m, int L1, int Bi, int Bj) {
-    printf("Phase 1\n");
+    //printf("Phase 1\n");
     int sub_base_l = l * L1;
     int sub_base_m = m * L1;
     for (int k = 0; k < L1; ++k) {
@@ -168,7 +168,7 @@ void fwi_phase1_min_plus(double* A, double* B, double* C, int n, int l, int m, i
                         assert(((ip + sub_base_l) * n) + (k + sub_base_m) < n*n);
                         assert(((k + sub_base_l) * n) + (jp + sub_base_m) < n*n);
 
-                        printf("Touching C[%d][%d], A[%d][%d], B[%d][%d]\n", (ip + sub_base_l), (jp + sub_base_m), (ip + sub_base_l), (k + sub_base_m), (k + sub_base_l), (jp + sub_base_m));
+                        //printf("Touching C[%d][%d], A[%d][%d], B[%d][%d]\n", (ip + sub_base_l), (jp + sub_base_m), (ip + sub_base_l), (k + sub_base_m), (k + sub_base_l), (jp + sub_base_m));
                         C[((ip + sub_base_l) * n) + (jp + sub_base_m)] = min(
                             C[((ip + sub_base_l) * n) + (jp + sub_base_m)], 
                             (A[((ip + sub_base_l) * n) + (k + sub_base_m)] + B[((k + sub_base_l) * n) + (jp + sub_base_m)])
