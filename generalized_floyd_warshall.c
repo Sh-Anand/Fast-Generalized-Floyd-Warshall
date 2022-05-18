@@ -49,6 +49,16 @@ void fw_min_plus(double *C, int n) {
     }
 }
 
+void fw_abc_min_plus(double* A, double* B, double* C, int n) {
+    for (size_t k = 0; k < n; k++) {
+        for (size_t i = 0; i < n; i++) {
+            for (size_t j = 0; j < n; j++) {
+                C[i*n + j] = min(C[i*n + j], C[i*n + k] + C[k*n + j]);
+            }
+        }
+    }
+}
+
 void basic_opt_fw_min_plus(double *C, int n) {
     double c_ik;
     int j0, j1, j2, j3, i_n, k_n;
@@ -128,6 +138,252 @@ void opt_blocked_fw_min_plus(double *C, int n, int Bi, int Bj, int Bk) {
     }
 }
 
+///////////////////////////TILED MIN PLUS///////////////////////////
+//Used as a basis for the sumatrix fwis
+void basic_fwi_min_plus(double* A, double* B, double *C, int n, int Bi, int Bj) {
+    for (int k = 0; k < n; ++k) {
+        for (int i = 0; i < n; i += Bi) {
+            for (int j = 0; j < n; j += Bj) {
+                for(int ip = i; ip < i + Bi; ++ip) {
+                    for(int jp = j; jp < j + Bj; ++jp) {
+                        C[(ip * n) + jp] =  min(C[ip * n + jp], A[ip * n + k] + B[k * n + jp]);
+                    }
+                }
+            }
+        }
+    }
+}
+
+void fwi_phase1_min_plus(double* A, double* B, double* C, int n, int l, int m, int L1, int Bi, int Bj) {
+    int sub_base_l = (l - 1) * L1;
+    int sub_base_m = (m - 1) * L1;
+    for (int k = 0; k < L1; ++k) {
+        for (int i = 0; i < L1; i += Bi) {
+            for (int j = 0; j < L1; j += Bj) {
+                for(int ip = i; ip < i + Bi; ++ip) {
+                    for(int jp = j; jp < j + Bj; ++jp) {
+                        //Sanity check
+                        assert(((ip + sub_base_l) * L1) + (jp + sub_base_m) < n);
+                        assert(((ip + sub_base_l) * L1) + (k + sub_base_m) < n);
+                        assert(((k + sub_base_l) * L1) + (jp + sub_base_m) < n);
+
+                        C[((ip + sub_base_l) * L1) + (jp + sub_base_m)] = min(
+                            C[((ip + sub_base_l) * L1) + (jp + sub_base_m)], 
+                            A[((ip + sub_base_l) * L1) + (k + sub_base_m)] + 
+                                B[((k + sub_base_l) * L1) + (jp + sub_base_m)]
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+void fwi_phase2_min_plus(double* A, double* B, double* C, int n, int l, int m, int L1, int Bi, int Bj) {
+    int sub_base_l = (l - 1) * L1;
+    int sub_base_m = (m - 1) * L1;
+    for (int k = 0; k < L1; ++k) {
+        for (int i = 0; i < L1; i += Bi) {
+            for (int j = 0; j < L1; j += Bj) {
+                for(int ip = i; ip < i + Bi; ++ip) {
+                    for(int jp = j; jp < j + Bj; ++jp) {
+                        //Sanity check
+                        assert(((ip + sub_base_l) * L1) + (jp + sub_base_m) < n);
+                        assert(((ip + sub_base_l) * L1) + (k + sub_base_l) < n);
+                        assert(((k + sub_base_l) * L1) + (jp + sub_base_m) < n);
+
+                        C[((ip + sub_base_l) * L1) + (jp + sub_base_m)] = min(
+                            C[((ip + sub_base_l) * L1) + (jp + sub_base_m)], 
+                            A[((ip + sub_base_l) * L1) + (k + sub_base_l)] + 
+                                B[((k + sub_base_l) * L1) + (jp + sub_base_m)]
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+void fwi_phase3_min_plus(double* A, double* B, double* C, int n, int l, int m, int L1, int Bi, int Bj) {
+    int sub_base_l = (l - 1) * L1;
+    int sub_base_m = (m - 1) * L1;
+    for (int k = 0; k < L1; ++k) {
+        for (int i = 0; i < L1; i += Bi) {
+            for (int j = 0; j < L1; j += Bj) {
+                for(int ip = i; ip < i + Bi; ++ip) {
+                    for(int jp = j; jp < j + Bj; ++jp) {
+                        //Sanity check
+                        assert(((ip + sub_base_m) * L1) + (jp + sub_base_l) < n);
+                        assert(((ip + sub_base_m) * L1) + (k + sub_base_l) < n);
+                        assert(((k + sub_base_l) * L1) + (jp + sub_base_l) < n);
+
+                        C[((ip + sub_base_m) * L1) + (jp + sub_base_l)] = min(
+                            C[((ip + sub_base_m) * L1) + (jp + sub_base_l)], 
+                            A[((ip + sub_base_m) * L1) + (k + sub_base_l)] + 
+                                B[((k + sub_base_l) * L1) + (jp + sub_base_l)]
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * @brief Final phase of tilling process, here A, B & C are distinct, and we need 3 submatrix parameters
+ * @param [A, B, C] FW matrices
+ * @param n original size of the NxN matrices
+ * @param l the first submatrix parameter (k in the paper)
+ * @param m the second submatrix parameter (i in the paper)
+ * @param o the last submatrix parameter (j in the paper)
+ * @param L1 the tilling size
+ * @param [Bi, Bj, Bk] tilling factors 
+ */
+void fwi_abc_min_plus(double* A, double* B, double* C, int n, int l, int m, int o, int L1, int Bi, int Bj, int Bk) {
+    int sub_base_l = (l - 1) * L1;
+    int sub_base_m = (m - 1) * L1;
+    int sub_base_o = (o - 1) * L1;
+    for (int i = 0; i < L1; i += Bi) {
+        for (int j = 0; j < L1; j += Bj) {
+            for (int k = 0; k < L1; k += Bk) {
+                for(int ip = i; ip < i + Bi; ++ip) {
+                    for(int jp = j; jp < j + Bj; ++jp) {
+                        for(int kp = k; kp < k + Bk; ++kp) {
+                            //Sanity check
+                            assert(((ip + sub_base_m) * L1) + (jp + sub_base_o) < n);
+                            assert(((ip + sub_base_m) * L1) + (kp + sub_base_l) < n);
+                            assert(((kp + sub_base_l) * L1) + (jp + sub_base_o) < n);
+                            C[((ip + sub_base_m) * L1) + (jp + sub_base_o)] = min(
+                            C[((ip + sub_base_m) * L1) + (jp + sub_base_o)], 
+                            A[((ip + sub_base_m) * L1) + (kp + sub_base_l)] + 
+                                B[((kp + sub_base_l) * L1) + (jp + sub_base_o)]
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * @brief FW iteration for MIN_PLUS
+ * @param A, the first operand matrix
+ * @param B, the second operand matrix
+ * @param C, the result matrix 
+ * @param n, the size of the NxN matrices
+ * @param Bi, tilling factor over i
+ * @param Bj, tilling factor over j
+ */
+void fwi_min_plus(double* A, double* B, double* C, int n, int Bi, int Bj) {
+    int ipn = 0;
+    int kn = 0;
+    int ipnplusjp = 0;
+    double a = 0.0;
+    double b = 0.0;
+    double apb = 0.0;
+    double min_c = 0.0;
+    for (int k = 0; k < n; ++k) {
+        for (int i = 0; i < n; i += Bi) {
+            for (int j = 0; j < n; j += Bj) {
+                kn = k * n;
+                for(int ip = i; ip < i + Bi; ++ip) {
+                    ipn = ip * n;
+                    a = A[ipn + k];
+                    for(int jp = j; jp < j + Bj; ++jp) {
+                        ipnplusjp = ipn + jp;
+                        b = B[kn + jp];
+                        apb = a + b;
+                        min_c =  min(C[ipnplusjp], apb);
+                        C[ipnplusjp] = min_c;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * @brief FW iteration for MIN_PLUS using three distinct matrices A, B, C
+ * @param A, the first operand matrix
+ * @param B, the second operand matrix
+ * @param C, the result matrix 
+ * @param n, the size of the NxN matrices
+ * @param Bi, tilling factor over i
+ * @param Bj, tilling factor over j
+ * @param Bk, tilling factor over k
+ */
+void fwi_abc(double* A, double* B, double* C, int n, int Bi, int Bj, int Bk) {
+    int ipn = 0;
+    int ipnpjp = 0;
+    int ipnpk = 0;
+    int kpnpjp = 0;
+    double apb = 0.0;
+    double min_c = 0.0;
+    for (int i = 0; i < n; i += Bi) {
+        for (int j = 0; j < n; j += Bj) {
+            for (int k = 0; k < n; k += Bk) {
+                for(int ip = i; ip < i + Bi; ++ip) {
+                    ipn = ip * n;
+                    for(int jp = j; jp < j + Bj; ++jp) {
+                        ipnpjp = ipn + jp;
+                        for(int kp = k; kp < k + Bk; ++kp) {
+                            ipnpk = ipn + k;
+                            kpnpjp = (kp * n) + jp;
+                            apb = A[ipnpk] + B[kpnpjp];
+                            min_c = min(C[ipnpjp], apb);
+                            C[ipnpjp] = min_c;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * @brief Tiled FW implementation for MIN_PLUS
+ * @param A, the first operand matrix
+ * @param B, the second operand matrix
+ * @param C, the result matrix
+ * @param L1, the tile size L1xL1 of the matrix
+ * @param n, the size of the NxN matrices
+ * @param Bi, tilling factor over i
+ * @param Bj, tilling factor over j
+ * @param Bk, tilling factor over k
+ */
+void tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int Bi, int Bj, int Bk) {
+    int m = n / L1;
+    for(int k = 0; k < m; ++k) {
+        //Tilling phase 1 (update C_kk)
+        fwi_phase1_min_plus(A, B, C, n, k, k, L1, Bi, Bj);
+
+        //Tilling phase 2 (Update all tiles in same row as C_kk)
+        for(int j = 0; j < m; ++j) {
+            if(j != k) {
+                fwi_phase2_min_plus(A, B, C, n, k, j, L1, Bi, Bj);
+            }
+        }
+
+        //Tilling phase 3 (Update all tiles in same column as C_kk)
+        for(int i = 0; i < m; ++i) {
+            if(i != k) {
+                fwi_phase3_min_plus(A, B, C, n, k, i, L1, Bi, Bj);
+            }
+        }
+
+        //Tilling phase 4 (Update all remaining tiles)
+        for(int i = 0; i < m; ++i) {
+            for(int j = 0; j < m; ++j) {
+                if(i != k && j != k) {
+                    fwi_abc_min_plus(A, B, C, n, k, i, j, L1, Bi, Bj, Bk);
+                }
+            }
+        }
+
+    }
+}
+
 //////////////////////VECT MIN PLUS//////////////////////
 
 void vect_fw_min_plus(double *C, int n) {
@@ -157,6 +413,8 @@ void vect_fw_min_plus(double *C, int n) {
         }
     }
 }
+
+//////////////////////MAX MIN//////////////////////
 
 void opt_fw_max_min(double *C, int n) {
     int i_n = 0;
@@ -366,6 +624,51 @@ void test_blocked(int n, void (*baseline)(double*, int), void (*optimization)(do
     free(C_opt);
 }
 
+void test_tiled(int n, void (*baseline)(double*, double*, double*, int), 
+    void (*optimization)(double*, double*, double*, int, int, int, int, int)
+) {
+    double *A_base = (double *)malloc(n*n*sizeof(double));
+    double *A_opt = (double *)malloc(n*n*sizeof(double));
+    double *B_base = (double *)malloc(n*n*sizeof(double));
+    double *B_opt = (double *)malloc(n*n*sizeof(double));
+    double *C_base = (double *)malloc(n*n*sizeof(double));
+    double *C_opt = (double *)malloc(n*n*sizeof(double));
+    init_matrices(A_base, A_opt, n);
+    init_matrices(B_base, B_opt, n);
+    init_matrices(C_base, C_opt, n);
+    // Run baseline function on C
+    baseline(A_base, B_base, C_base, n);
+
+    int L1 = n/4;
+
+    int Bi, Bj, Bk;
+    Bi = L1/4;
+    Bj = L1/4;
+    Bk = L1/4;
+    
+    // Run optimized function on C
+    optimization(A_opt, B_opt, C_opt, L1, n, Bi, Bj, Bk);
+
+    for(int i = 0; i < n; i++) {
+        for(int j = 0; j < n; j++) {
+            printf("base[%d][%d] = %lf ", i, j, C_base[n*i + j]);
+            printf("opt[%d][%d] = %lf\n", i, j, C_opt[n*i + j]);
+        }
+    }
+    
+    // Compare both
+    for(int i = 0; i < n; ++i) {
+        assert(C_opt[i] == C_base[i]);
+    }
+
+    free(A_base);
+    free(A_opt);
+    free(B_base);
+    free(B_opt);
+    free(C_base);
+    free(C_opt);
+}
+
 void test(int n, void (*baseline)(double*, int), void (*optimization)(double*, int)) {
     double *C_base = (double *)malloc(n*n*sizeof(double));
     double *C_opt = (double *)malloc(n*n*sizeof(double));
@@ -413,6 +716,7 @@ int main(int argc, char **argv) {
             printf("%lf", C[n*i + j]);
 
     test_blocked(n, fw_min_plus, opt_blocked_fw_min_plus);
+    //test_tiled(n, fw_abc_min_plus, tiled_fw_min_plus);
 
     free(C);
 

@@ -10,6 +10,12 @@ OBJ = generalized_floyd_warshall.o
 ffw: $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS)
 
+ffw_blocked: $(OBJ)
+	$(CC) -o -D name=BLOCKED $@ $^ $(CFLAGS) 
+
+ffw_tiled: $(OBJ)
+	$(CC) -D name=TILED -o $@ $^ $(CFLAGS) 
+
 clean:
 	rm -f *.o
 
@@ -18,3 +24,9 @@ bench:
 
 min_plus: clean ffw
 	./ffw 256 0
+
+test_blocked: clean ffw_blocked
+	./ffw_blocked 256 0
+
+test_tiled: clean ffw_tiled
+	./ffw_tiled 256 0
