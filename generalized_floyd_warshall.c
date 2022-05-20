@@ -17,6 +17,7 @@
 #include <inttypes.h>
 #include <immintrin.h>
 #include <assert.h>
+#include <string.h>
 
 #ifdef __x86_64__
 #include "tsc_x86.h"
@@ -28,6 +29,24 @@
 #define CALIBRATE
 #define ZERO_PROBABILITY 10 //1/ZERO_PROBABILITY is the probability of an entry in the bit matrix being zero
 
+void print_bits(u_int64_t d){
+    unsigned char * bits = (unsigned char *) & d;
+    int i;
+
+    for (i = sizeof (u_int64_t) - 1; i >= 0 ; i--) {
+         printf ("%02X ", bits[i]);
+    }
+    printf ("\n");
+}
+
+void print_vector(__m256i v){
+    u_int64_t values[4];
+    memcpy(values, &v, sizeof(values));
+    print_bits( values[3]);
+    print_bits( values[2]);
+    print_bits( values[1]);
+    print_bits( values[0]);
+}
 
 void fw_max_min(double *C, int n) {
     for (size_t k = 0; k < n; k++) {
@@ -592,70 +611,78 @@ void fw_or_and(double *C, int n) {
     for (size_t k = 0; k < n; k++) {
         for (size_t i = 0; i < n; i++) {
             for (size_t j = 0; j < n; j++) {
-                C[i*n + j] = (uint64_t)C[i*n + j] | ((uint64_t)C[i*n + k] & (uint64_t)C[k*n + j]);
+                C[i*n + j] = (u_int64_t)C[i*n + j] | ((u_int64_t)C[i*n + k] & (u_int64_t)C[k*n + j]);
             }
         }
     }
 }
 
-void opt_fw_or_and_256(double *C, int n) {
-    int i_n = 0;
-
-    double *c_addr = &C[0], *addr_ij, *addr_ik, *addr_kj;
-    __m256d c_ij, c_ik, c_kj, c2, cmp_lt, res;
+void fw_or_and_int(u_int64_t *C, int n) {
     for (size_t k = 0; k < n; k++) {
         for (size_t i = 0; i < n; i++) {
-            for (size_t j = 0; j < n; j+=4) {
-                addr_ij = c_addr + sizeof(double) * (i_n + j);
-                addr_ik = c_addr + sizeof(double) * (i_n + k);
-                addr_kj = c_addr + sizeof(double) * (k*n + j);
-                
-                c_ij = _mm256_load_pd(addr_ij);
-                c_ik = _mm256_load_pd(addr_ik);
-                c_kj = _mm256_load_pd(addr_kj);
-
-                c2 = _mm256_add_pd(c_ik, c_kj);
-                // Compute min
-                cmp_lt = _mm256_cmp_pd(c_ij, c2, _CMP_LT_OQ);
-                res = _mm256_blendv_pd(c2, c_ij, cmp_lt);
-                _mm256_store_pd(addr_ij, res);
+            for (size_t j = 0; j < n; j++) {
+                //printf("%lx \n", C[i*n + k]);
+                C[i*n + j] = C[i*n + j] | (C[i*n + k] & C[k*n + j]);
             }
+        }
+    }
+}
+
+void opt_fw_or_and_256(u_int64_t *C,int n) {
+    assert(C == (u_int64_t *)(__m256i*)C);
+    u_int64_t *c_addr = C, *addr_ik, *addr_ij , *addr_kj;
+    __m256i c_ij, c_ik, c_kj, c2, cmp_lt, res;
+    for (size_t k = 0; k < n; k++) {
+        int i_n = 0;
+        for (size_t i = 0; i < n; i++) {
+            size_t j = 0;
+            addr_ik = c_addr + (i_n + k);
+            //printf("access ik");
+            
+            c_ik = _mm256_set_epi64x (*addr_ik,
+                                        *addr_ik,
+                                        *addr_ik,
+                                        *addr_ik);
+            //printf("%04llx\n", (unsigned long long)*addr_ik);
+            /* printf("cik : ");
+            print_vector(c_ik); */
+            for (; j <= n - 4; j+=4) {
+                addr_ij = c_addr + (i_n + j);
+                addr_kj = c_addr + (k*n + j);
+                //printf("access ij");
+                c_ij = _mm256_load_si256((__m256i *)addr_ij);
+                
+                /* printf("cij : ");
+                print_vector(c_ij); */
+                //printf("access kj");
+                c_kj = _mm256_load_si256((__m256i *)addr_kj);
+ /*                
+                printf("ckj : ");
+                print_vector(c_kj);
+       */          
+                c2 = _mm256_and_si256(c_ik, c_kj);
+
+               /*  printf("and : ");
+                print_vector(c2); */
+
+                res = _mm256_or_si256(c_ij, c2);
+
+                /* printf("or : ");
+                print_vector(res); */
+                //printf("store ij");
+                _mm256_store_si256((__m256i *) addr_ij ,res);
+            }
+            
+            for(;j < n; j++){
+                C[i_n + j] = C[i_n + j] | ( C[i_n + k] &  C[k*n + j]); 
+                printf("%d %d %d\n", (int)(i_n+j), (int)(i_n+k),(int)(k*n + j));
+            }
+            
             i_n += n;
         }
     }
 }
 
-// void opt_fw_or_and_512(double *C, int n) {
-//     int i_n = 0;
-
-//     double *c_addr = &C[0], *addr_ij, *addr_ik, *addr_kj;
-//     __m512d c_ij, c_ik, c_kj, c2, cmp_lt, res;
-//     for (size_t k = 0; k < n; k++) {
-//         for (size_t i = 0; i < n; i++) {
-//             size_t j = 0;
-//             for (; j < n; j+=8) {
-//                 addr_ij = c_addr + sizeof(double) * (i_n + j);
-//                 addr_ik = c_addr + sizeof(double) * (i_n + k);
-//                 addr_kj = c_addr + sizeof(double) * (k*n + j);
-                
-//                 c_ij = _mm512_load_pd(addr_ij);
-//                 c_ik = _mm512_load_pd(addr_ik);
-//                 c_kj = _mm512_load_pd(addr_kj);
-
-//                 c2 = _mm512_and_pd(c_ik, c_kj);
-//                 res = _mm512_or_pd(c_ij, c2);
-//                 _mm512_store_pd(addr_ij, res);
-//             }
-//             for(;j < n; j++){
-//                 u_int64_t c_ij_bits = *(u_int64_t *)(&C[i_n + j]);
-//                 u_int64_t c_ik_bits = *(u_int64_t *)(&C[i_n + k]);
-//                 u_int64_t c_kj_bits = *(u_int64_t *)(&C[k*n + j]);
-//                 C[i_n + j] = c_ij_bits | (c_ik_bits & c_kj_bits); //maybe is wrong cause it gets converted to double
-//             }
-//             i_n += n;
-//         }
-//     }
-// }
 
 void init_matrix(double *C, int n) {
     for (size_t i = 0; i < n; i++) {
@@ -670,6 +697,17 @@ void init_matrices(double *C1, double *C2, int n) {
     for (size_t i = 0; i < n; i++) {
         for (size_t j = 0; j < n; j++) {
             x = ((double )rand() + 1)/RAND_MAX;
+            C1[i * n + j] = x;
+            C2[i * n + j] = x;
+        }
+    }   
+}
+
+void init_bit_matrices(u_int64_t *C1, u_int64_t *C2, int n) {
+    u_int64_t x;
+    for (size_t i = 0; i < n; i++) {
+        for (size_t j = 0; j < n; j++) {
+            x = (rand() % ZERO_PROBABILITY);
             C1[i * n + j] = x;
             C2[i * n + j] = x;
         }
@@ -731,6 +769,41 @@ double benchmark(double* C, int n, void (*init_matrix) (double*, int), double (*
     return timer(C, n, compute);
 }
 
+void test_or_and(int n){
+    u_int64_t *C_base = (u_int64_t *)malloc(n*n*sizeof(double));
+    u_int64_t *C_opt = (u_int64_t *)malloc(n*n*sizeof(double));
+    init_bit_matrices(C_base, C_opt, n);
+    
+     for(int i = 0; i < n; i++){
+        for(int j = 0; j < n; j++){
+            printf("%lu ", C_base[n*i + j]);
+            printf("%lu\n", C_opt[n*i + j]);
+        }
+    }
+
+    // Run baseline function on C
+    fw_or_and_int(C_base, n);
+    // Run optimized function on C
+    opt_fw_or_and_256(C_opt, n);
+    /*
+    for(int i = 0; i < n; i++) {
+        for(int j = 0; j < n; j++) {
+            //printf("base[%d][%d] = %lf ", i, j, C_base[n*i + j]);
+            //printf("opt[%d][%d] = %lf\n", i, j, C_opt[n*i + j]);
+            print_bits(C_base[n*i + j]);
+            print_bits(C_opt[n*i + j]);
+        }
+    }
+    */
+    // Compare both
+    for(int i = 0; i < n; ++i) {
+        assert(C_opt[i] == C_base[i]);
+    }
+
+    free(C_base);
+    free(C_opt);
+}
+
 void test_blocked(int n, void (*baseline)(double*, int), void (*optimization)(double*, int, int, int, int)) {
     double *C_base = (double *)malloc(n*n*sizeof(double));
     double *C_opt = (double *)malloc(n*n*sizeof(double));
@@ -787,7 +860,7 @@ void test_tiled(int n, void (*baseline)(double*, double*, double*, int),
     
     // Run optimized function on C
     optimization(A_opt, B_opt, C_opt, L1, n, Bi, Bj, Bk);
-
+    /*
     printf("\n");
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < n; j++) {
@@ -796,6 +869,7 @@ void test_tiled(int n, void (*baseline)(double*, double*, double*, int),
         }
     }
     printf("\n");
+    */
     // Compare both 
     for(int i = 0; i < n*n; ++i) {
         assert(C_opt[i] == C_base[i]);
@@ -812,19 +886,29 @@ void test_tiled(int n, void (*baseline)(double*, double*, double*, int),
 void test(int n, void (*baseline)(double*, int), void (*optimization)(double*, int)) {
     double *C_base = (double *)malloc(n*n*sizeof(double));
     double *C_opt = (double *)malloc(n*n*sizeof(double));
-    init_matrices(C_base, C_opt, n);
+        init_matrices(C_base, C_opt, n);
+    
+/*     for(int i = 0; i < n; i++){
+        for(int j = 0; j < n; j++){
+            printf("%lf", C_base[n*i + j]);
+            printf("%lf", C_opt[n*i + j]);
+        }
+    }
+ */
     // Run baseline function on C
     baseline(C_base, n);
     // Run optimized function on C
     optimization(C_opt, n);
-
+    /*
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < n; j++) {
-            printf("base[%d][%d] = %lf ", i, j, C_base[n*i + j]);
-            printf("opt[%d][%d] = %lf\n", i, j, C_opt[n*i + j]);
+            //printf("base[%d][%d] = %lf ", i, j, C_base[n*i + j]);
+            //printf("opt[%d][%d] = %lf\n", i, j, C_opt[n*i + j]);
+            print_bits(C_base[n*i + j]);
+            print_bits(C_opt[n*i + j]);
         }
     }
-    
+    */
     // Compare both
     for(int i = 0; i < n; ++i) {
         assert(C_opt[i] == C_base[i]);
@@ -850,14 +934,16 @@ int main(int argc, char **argv) {
     printf("%s\n", msg[fwi]);
     printf(" FW : RDTSC instruction:\n %lf cycles measured\n\n", r);
 #endif
-
+    /*
     for(int i = 0; i < n; i++)
         for(int j = 0; j < n; j++)
             printf("%lf", C[n*i + j]);
-
-    printf("\n");
+    */
+    //printf("\n");
+    //test(n, fw_or_and, opt_fw_or_and_256);
     //test_blocked(n, fw_min_plus, opt_blocked_fw_min_plus);
-    test_tiled(n, fw_abc_min_plus, tiled_fw_min_plus);
+    //test_tiled(n, fw_abc_min_plus, tiled_fw_min_plus);
+    //test_or_and(n);
 
     free(C);
 
