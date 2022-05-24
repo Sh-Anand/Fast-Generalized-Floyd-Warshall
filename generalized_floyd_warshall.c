@@ -78,6 +78,16 @@ void fw_abc_min_plus(double* A, double* B, double* C, int n) {
     }
 }
 
+void fw_abc_max_min(double* A, double* B, double* C, int n) {
+    for (size_t k = 0; k < n; k++) {
+        for (size_t i = 0; i < n; i++) {
+            for (size_t j = 0; j < n; j++) {
+                C[i*n + j] = max(C[i*n + j], min(A[i*n + k], B[k*n + j]));
+            }
+        }
+    }
+}
+
 void basic_opt_fw_min_plus(double *C, int n) {
     double c_ik;
     int j0, j1, j2, j3, i_n, k_n;
