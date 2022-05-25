@@ -800,16 +800,7 @@ void test_or_and(int n){
     fw_or_and_int(C_base, n);
     // Run optimized function on C
     opt_fw_or_and_256(C_opt, n);
-    /*
-    for(int i = 0; i < n; i++) {
-        for(int j = 0; j < n; j++) {
-            //printf("base[%d][%d] = %lf ", i, j, C_base[n*i + j]);
-            //printf("opt[%d][%d] = %lf\n", i, j, C_opt[n*i + j]);
-            print_bits(C_base[n*i + j]);
-            print_bits(C_opt[n*i + j]);
-        }
-    }
-    */
+
     // Compare both
     for(int i = 0; i < n; ++i) {
         assert(C_opt[i] == C_base[i]);
