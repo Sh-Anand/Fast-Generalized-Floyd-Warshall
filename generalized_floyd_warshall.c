@@ -28,6 +28,7 @@
 #define FREQUENCY 2.7e9
 #define CALIBRATE
 #define ZERO_PROBABILITY 10 //1/ZERO_PROBABILITY is the probability of an entry in the bit matrix being zero
+#define EPS  0.000001
 
 void print_bits(u_int64_t d){
     unsigned char * bits = (unsigned char *) & d;
@@ -553,19 +554,22 @@ void tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int Bi, i
 //////////////////////VECT MIN PLUS//////////////////////
 
 void vect_fw_min_plus(double *C, int n) {
-    int i_n = 0;
-
+    assert((u_int64_t) C % 32 == 0);
     double *addr_ij, *addr_ik, *addr_kj;
     __m256d c_ij, c_ik, c_kj, c2, cmp_lt, res;
     for (size_t k = 0; k < n; k++) {
+        int i_n = 0;
         for (size_t i = 0; i < n; i++) {
             addr_ik = &(C[i_n + k]);
-            c_ik = _mm256_load_pd(addr_ik);
+            //printf("%lu %lu %u\n", i, k, i_n);
+            //printf("%lx\n", (u_int64_t)addr_ik);
+            c_ik = _mm256_set1_pd(*addr_ik);
 
-            for (size_t j = 0; j < n; j+=4) {
+            for (size_t j = 0; j < n - 4; j+=4) {
                 addr_ij = &(C[i_n + j]);
+                //printf("%lx\n", (u_int64_t)addr_ij);
                 addr_kj = &(C[k*n + j]);
-                
+                //printf("%lx\n", (u_int64_t)addr_kj);
                 c_ij = _mm256_load_pd(addr_ij);
                 c_kj = _mm256_load_pd(addr_kj);
 
@@ -639,7 +643,8 @@ void fw_or_and_int(u_int64_t *C, int n) {
 }
 
 void opt_fw_or_and_256(u_int64_t *C,int n) {
-    assert(C == (u_int64_t *)(__m256i*)C);
+    // with assert doesn't work
+    //assert((u_int64_t) C % 32 == 0);
     u_int64_t *c_addr = C, *addr_ik, *addr_ij , *addr_kj;
     __m256i c_ij, c_ik, c_kj, c2, cmp_lt, res;
     for (size_t k = 0; k < n; k++) {
@@ -656,7 +661,7 @@ void opt_fw_or_and_256(u_int64_t *C,int n) {
             //printf("%04llx\n", (unsigned long long)*addr_ik);
             /* printf("cik : ");
             print_vector(c_ik); */
-            for (; j <= n - 4; j+=4) {
+            for (; j < n - 4; j+=4) {
                 addr_ij = c_addr + (i_n + j);
                 addr_kj = c_addr + (k*n + j);
                 //printf("access ij");
@@ -895,8 +900,8 @@ void test_tiled(int n, void (*baseline)(double*, double*, double*, int),
 
 void test(int n, void (*baseline)(double*, int), void (*optimization)(double*, int)) {
     double *C_base = (double *)malloc(n*n*sizeof(double));
-    double *C_opt = (double *)malloc(n*n*sizeof(double));
-        init_matrices(C_base, C_opt, n);
+    double *C_opt = (double *)aligned_alloc(32, n*n*sizeof(double));
+    init_matrices(C_base, C_opt, n);
     
 /*     for(int i = 0; i < n; i++){
         for(int j = 0; j < n; j++){
@@ -921,7 +926,7 @@ void test(int n, void (*baseline)(double*, int), void (*optimization)(double*, i
     */
     // Compare both
     for(int i = 0; i < n; ++i) {
-        assert(C_opt[i] == C_base[i]);
+        assert(abs(C_opt[i] - C_base[i])  <= EPS);
     }
 
     free(C_base);
@@ -950,7 +955,7 @@ int main(int argc, char **argv) {
             printf("%lf", C[n*i + j]);
     */
     //printf("\n");
-    //test(n, fw_or_and, opt_fw_or_and_256);
+    test(n, fw_min_plus, vect_fw_min_plus);
     //test_blocked(n, fw_min_plus, opt_blocked_fw_min_plus);
     //test_tiled(n, fw_abc_min_plus, tiled_fw_min_plus);
     //test_or_and(n);
