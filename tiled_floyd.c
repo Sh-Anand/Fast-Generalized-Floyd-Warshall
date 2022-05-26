@@ -539,7 +539,7 @@ double benchmark_tiled_timed(int n, void (*baseline)(double*, double*, double*, 
 
     double time = rdtsc_tiled(C_opt, C_opt, C_opt, n, L1, Bi, Bj, Bk, compute);
 
-    printf("Time taken to run tiled : %f\n", time);
+    printf("Time taken to run tiled :       %f\n", time);
 
     // Compare both 
     for(int i = 0; i < n*n; ++i) {
