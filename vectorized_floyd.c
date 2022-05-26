@@ -70,6 +70,16 @@ void fw_or_and(u_int64_t *C, int n) {
     }
 }
 
+void fw_max_min(double *C, int n) {
+    for (size_t k = 0; k < n; k++) {
+        for (size_t i = 0; i < n; i++) {
+            for (size_t j = 0; j < n; j++) {
+                C[i*n + j] = max(C[i*n + j], min(C[i*n + k], C[k*n + j]));
+            }
+        }
+    }
+}
+
 //////////////////////VECT MIN PLUS//////////////////////
 
 void vect_fw_min_plus(double *C, int n) {
@@ -93,6 +103,34 @@ void vect_fw_min_plus(double *C, int n) {
 
                 cmp_lt = _mm256_cmp_pd(c_ij, c2, _CMP_LT_OQ);
                 res = _mm256_blendv_pd(c2, c_ij, cmp_lt);
+                _mm256_store_pd(addr_ij, res);
+            }
+            i_n += n;
+        }
+    }
+}
+
+void vect_fw_max_min(double *C, int n) {
+    assert((u_int64_t) C % 32 == 0);
+    double *addr_ij, *addr_ik, *addr_kj;
+    __m256d c_ij, c_ik, c_kj, c2, cmp_lt, cmp_gt, res;
+    for (size_t k = 0; k < n; k++) {
+        int i_n = 0;
+        for (size_t i = 0; i < n; i++) {
+            addr_ik = &(C[i_n + k]);
+
+            c_ik = _mm256_set1_pd(*addr_ik);
+
+            for (size_t j = 0; j < n - 4; j+=4) {
+                addr_ij = &(C[i_n + j]);
+                addr_kj = &(C[k*n + j]);
+                c_ij = _mm256_load_pd(addr_ij);
+                c_kj = _mm256_load_pd(addr_kj);
+                cmp_lt = _mm256_cmp_pd(c_ik, c_kj, _CMP_LT_OQ);
+                c2 = _mm256_blendv_pd(c_kj, c_ik, cmp_lt);
+
+                cmp_gt = _mm256_cmp_pd(c_ij, c2, _CMP_GT_OQ);
+                res = _mm256_blendv_pd(c2, c_ij, cmp_gt);
                 _mm256_store_pd(addr_ij, res);
             }
             i_n += n;
@@ -284,19 +322,27 @@ void bench_test_or(int n, void (*baseline)(uint64_t*, int), void (*optimization)
     free(C_opt);
 }
 
+
 int main(int argc, char **argv) {
     if (argc!=3) {printf("usage: FW <n> <fw> (fw = 0,1,2 = (min,plus), (or,and), (max, min))\n"); return -1;}
     int n = atoi(argv[1]);
     int fwi = atoi(argv[2]);
     printf("n=%d \n",n);
 
-    /*
-    for(int i = 0; i < n; i++)
-        for(int j = 0; j < n; j++)
-            printf("%lf", C[n*i + j]);
-    */
-    //printf("\n");
-    // bench_test(n, fw_min_plus, vect_fw_min_plus);
-    bench_test_or(n, fw_or_and, vect_fw_or_and);
+    switch (fwi)
+    {
+    case 0:
+        bench_test(n, fw_min_plus, vect_fw_min_plus);
+        break;
+    case 1:
+        bench_test_or(n, fw_or_and, vect_fw_or_and);
+        break;
+    case 2:
+        bench_test(n, fw_max_min, vect_fw_max_min);
+        break;
+    default:
+        break;
+    }
+
     return 0;
 }
