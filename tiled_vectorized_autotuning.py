@@ -6,7 +6,7 @@ from platform import system
 
 compiled_file = "ffw" + (".exe " if system() == "Windows" else ".out") #do not remove space
 
-repetitions_for_confidence = 1 #number of repetitions of each n, median is taken
+repetitions_for_confidence = 3 #number of repetitions of each n, median is taken
 file_name = "vectorized_tiled_floyd.c" #do not remove space after the end!
 
 THIS_FOLDER = os.path.dirname(os.path.abspath(__file__))
@@ -22,8 +22,8 @@ run("gcc -o ffw " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", 
 
 x = []
 y = []
-MAX_N = 2048
-n = 2048
+MAX_N = 256
+n = 4
 L1 = 1
 B = 1
 res = []
@@ -33,6 +33,7 @@ while n <= MAX_N:
     while L1 <= n:
         B = 1
         while B <= L1:
+            tmp_cycles = 0.0
             for i in range(repetitions_for_confidence):
 
                 output = run("%s %d %d %d" % (executable_abs_path, n, L1, B), capture_output=True, shell=True).stdout.decode("utf-8")
