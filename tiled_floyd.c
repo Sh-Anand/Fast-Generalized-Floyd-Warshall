@@ -842,7 +842,7 @@ double benchmark_tiled_or(int n, void (*baseline)(uint64_t*, uint64_t*, uint64_t
 }
 
 int main(int argc, char **argv) {
-    if (argc!=5) {printf("usage: FW <n> <fw> <tiled> <L1> <B> (fw = 0,1,2 = (min,plus), (or,and), (max, min)), (tiled = 0,1)\n"); return -1;}
+    if (argc!=5) {printf("usage: FW <n> <fw> <L1> <B> (fw = 0,1,2 = (min,plus), (or,and), (max, min))\n"); return -1;}
     int n = atoi(argv[1]);
     int fw = atoi(argv[2]);
     int L1 = atoi(argv[3]);
