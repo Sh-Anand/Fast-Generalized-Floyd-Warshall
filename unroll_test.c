@@ -58,7 +58,196 @@ void fw_abc_or_and(uint64_t* A, uint64_t* B, uint64_t* C, int n) {
         }
     }
 }
+void tiled_fw_opt_min_plus(double* A, double* B, double* C, int L1, int n, int Bi, int Bj, int Bk) {
+    int mm = n / L1;
+    // printf("L1 : %d, Bi : %d, Bj : %d, Bk : %d, m : %d\n", L1, Bi, Bj, Bk, m);
+    for(int k = 0; k < mm; ++k) {
+        //Tilling phase 1 (update C_kk)
+        int l1 = k;
+        int m1 = k;
+        int sub_base_l = l1 * L1;
+        int sub_base_m = m1 * L1;
+        int ipln = 0;
+        int jpm = 0;
+        int iplnpjpm = 0;
+        int kpbm = 0;
+        int kpbln = 0;
+        int iplnpkpbm = 0;
+        double apb = 0.0;
+        double min_c = 0.0;
+        double c = 0.0;
+        double a = 0.0;
+        for (int k = 0; k < L1; ++k) {
+            kpbm = k + sub_base_m;
+            kpbln = ((k + sub_base_l) * n);
+            for (int i = 0; i < L1; i += Bi) {
+                for (int j = 0; j < L1; j += Bj) {
+                    for(int ip = i; ip < i + Bi; ++ip) {
+                        ipln = ((ip + sub_base_l) * n);
+                        iplnpkpbm = ipln + kpbm;
+                        a = A[iplnpkpbm];
+                        for(int jp = j; jp < j + Bj; ++jp) {
+                        //printf("TOUCHING IN P1 A[%d][%d], B[%d][%d], C[%d][%d]\n", (ip + sub_base_l), (jp + sub_base_m), (ip + sub_base_l), (k + sub_base_m), (k + sub_base_l), (jp + sub_base_m));
+                            jpm = (jp + sub_base_m);
+                            iplnpjpm = ipln + jpm;
+                            c = C[iplnpjpm];
+                            apb = a + B[kpbln + jpm];
+                            min_c = min(c, apb);
+                            C[iplnpjpm] = min_c;
+                        }
+                    }
+                }
+            }
+        }
 
+        //Tilling phase 2 (Update all tiles in same row as C_kk)
+        for(int j = 0; j < mm; ++j) {
+            if(j != k) {
+                //fwi_phase2_min_plus(A, B, C, n, k, j, L1, Bi, Bj);
+                int l2 = k;
+                int m2 = j;
+                int sub_base_l = l2 * L1;
+                int sub_base_m = m2 * L1;
+                int ipln = 0;
+                int jpm = 0;
+                int kl = 0;
+                int kln = 0;
+                int iplnkl = 0;
+                int iplnjpm = 0;
+                double apb = 0.0;
+                double min_c = 0.0;
+                double c = 0.0;
+                double a = 0.0;
+                for (int k = 0; k < L1; ++k) {
+                    kl = (k + sub_base_l);
+                    kln = kl * n;
+                    for (int i = 0; i < L1; i += Bi) {
+                        for (int j = 0; j < L1; j += Bj) {
+                            for(int ip = i; ip < i + Bi; ++ip) {
+                                ipln = ((ip + sub_base_l) * n);
+                                iplnkl = ipln + kl;
+                                a = A[iplnkl];
+                                for(int jp = j; jp < j + Bj; ++jp) {
+                                    jpm = (jp + sub_base_m);
+                                    iplnjpm = ipln + jpm; 
+                                    apb = a + B[kln + jpm];
+                                    c = C[iplnjpm];
+                                    min_c = min(c, apb);
+                                    C[iplnjpm] = min_c;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        //Tilling phase 3 (Update all tiles in same column as C_kk)
+        for(int i = 0; i < mm; ++i) {
+            if(i != k) {
+                int l3 = k;
+                int m3 = i;
+                int sub_base_l = l3 * L1;
+                int sub_base_m = m3 * L1;
+                int ipmn = 0;
+                int kl = 0;
+                int kln = 0;
+                int ipmnkl = 0;
+                int jpl = 0;
+                int ipmnjpl = 0;
+                int klnjpl = 0;
+                double apb = 0.0;
+                double c = 0.0;
+                double min_c = 0.0;
+                double a = 0.0;
+                for (int k = 0; k < L1; ++k) {
+                    kl = (k + sub_base_l);
+                    kln = kl * n;
+                    for (int i = 0; i < L1; i += Bi) {
+                        for (int j = 0; j < L1; j += Bj) {
+                            for(int ip = i; ip < i + Bi; ++ip) {
+                                ipmn = ((ip + sub_base_m) * n);
+                                ipmnkl = ipmn + kl; 
+                                a = A[ipmnkl];
+                                for(int jp = j; jp < j + Bj; ++jp) {
+                                    //printf("TOUCHING IN P3 A[%d][%d], B[%d][%d], C[%d][%d]\n", (ip + sub_base_l), (jp + sub_base_m), (ip + sub_base_l), (k + sub_base_m), (k + sub_base_l), (jp + sub_base_m));
+                                    jpl = (jp + sub_base_l);
+                                    ipmnjpl = ipmn + jpl;
+                                    klnjpl = kln + jpl;
+                                    apb = a + B[klnjpl];
+                                    c = C[ipmnjpl];
+                                    min_c = min(c, apb);
+                                    C[ipmnjpl] = min_c;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        //Tilling phase 4 (Update all remaining tiles)
+        for(int i = 0; i < mm; ++i) {
+            if(i != k){
+                for(int j = 0; j < mm; ++j) {
+                    if(j != k) {
+                        int iBi = 0, jBj = 0, kBk = 0;
+
+                        double a = 0.0, b = 0.0, apb = 0.0, c = 0.0, minc = 0.0;
+                        int ipnjp =0, ipnkp = 0, kpnjp = 0;
+
+                        double a1 = 0.0, b1 = 0.0, apb1 = 0.0, c1 = 0.0, minc1 = 0.0;
+                        int ipnjp1 =0, ipnkp1 = 0, kpnjp1 = 0;
+
+                        double a2 = 0.0, b2 = 0.0, apb2 = 0.0, c2 = 0.0, minc2 = 0.0;
+                        int ipnjp2 =0, ipnkp2 = 0, kpnjp2 = 0;
+
+                        for (int i = 0; i < L1; i += Bi) {
+                            iBi = i + Bi;
+                            for (int j = 0; j < L1; j += Bj) {
+                                jBj = j + Bj;
+                                for (int k = 0; k < L1; k += Bk) {
+                                    kBk = k + Bk;
+                                    for(int kp = k; kp < kBk; ++kp) {
+                                        ipnjp = 0;
+                                        ipnkp = kp;
+                                        kpnjp = n*kp;
+                                        ipnjp1 = 1;
+                                        ipnkp1 = kp + 1;
+                                        kpnjp1 = kpnjp + 1;
+                                        for(int ip = i; ip < iBi; ++ip) {
+                                            for(int jp = j; jp < jBj; jp+=2) {
+                                                a = A[ipnkp];
+                                                b = B[kpnjp];
+                                                c = C[ipnjp];
+                                                apb = a + b;
+                                                minc = min(c, apb);
+                                                ipnjp++;
+                                                kpnjp++;
+                                                C[ipnjp] = minc;
+
+                                                a1 = A[ipnkp1];
+                                                b1 = B[kpnjp1];
+                                                c1 = C[ipnjp1];
+                                                apb1 = a1 + b1;
+                                                minc1 = min(c1, apb1);
+                                                ipnjp1++;
+                                                kpnjp1++;
+                                                C[ipnjp1] = minc1;
+                                            }
+                                            ipnkp += n;
+                                            ipnkp1 += n;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 /**
  * @brief Tiled FW implementation for MIN_PLUS
  * @param A, the first operand matrix
@@ -221,20 +410,12 @@ void tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int Bi, i
                         for (int i = 0; i < L1; i += Bi) {
                             for (int j = 0; j < L1; j += Bj) {
                                 for (int k = 0; k < L1; k += Bk) {
-                                    for(int ip = i; ip < i + Bi; ++ip) {
-                                        ipmn = (ip + sub_base_m) * n;
-                                        for(int jp = j; jp < j + Bj; ++jp) {
-                                            jpo = (jp + sub_base_o);
-                                            ipmnpjpo = ipmn + jpo;
-                                            c = C[ipmnpjpo];
-                                            min_c = c;
-                                            for(int kp = k; kp < k + Bk; ++kp) {
-                                                kpl = kp + sub_base_l;
-                                                kplnpjpo = (kpl * n) + jpo;
-                                                apb = A[ipmn + kpl] + B[kplnpjpo];
-                                                min_c = min(min_c, apb);
+                                    for(int kp = k; kp < k + Bk; ++kp) {
+                                        for(int ip = i; ip < i + Bi; ++ip) {
+                                            for(int jp = j; jp < j + Bj; ++jp) {
+                                                C[n*(ip + sub_base_m) + (jp + sub_base_m)] = min(C[n*(ip + sub_base_m) + (jp + sub_base_o)], 
+                                                                                                A[n*(ip + sub_base_m) + (kp + sub_base_l)] + B[n*(kp + sub_base_l) + (jp + sub_base_o)]);
                                             }
-                                            C[ipmnpjpo] = min_c;
                                         }
                                     }
                                 }
