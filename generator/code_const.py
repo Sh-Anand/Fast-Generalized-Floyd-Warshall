@@ -547,9 +547,9 @@ void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int B
                                         for(int ip = i; ip < iBi; ++ip) {
                                             ipsubmn = (ip + sub_base_m) * n;
                                             C_i = C + ipsubmn; 
+                                            jp = 0;
                                             jpsubo = sub_base_o;
                                             jpsubo1 = jpsubo + 4;
-                                            jp = 0;
                                             a_v = _mm256_set1_pd(A[ipsubmn + kpsubl]);
                                             for(; jp <= jBj4; jp += 8) {
                                                 B_k_j = B_k + jpsubo;
