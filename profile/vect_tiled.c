@@ -22,7 +22,7 @@
 #define ZERO_PROBABILITY 10 //1/ZERO_PROBABILITY is the probability of an entry in the bit matrix being zero
 #define EPS  0.000001
 
-    void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int Bi, int Bj, int Bk) {
+void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int Bi, int Bj, int Bk) {
         int mm = n / L1;
         for(int k = 0; k < mm; ++k) {
             int l1 = k;
@@ -284,6 +284,218 @@ jpsubo1+=8;
         }
     }
 
+void tiled_fw_max_min(double* A, double* B, double* C, int L1, int n, int Bi, int Bj, int Bk) {
+    int mm = n / L1;
+    // printf("L1 : %d, Bi : %d, Bj : %d, Bk : %d, m : %d\n", L1, Bi, Bj, Bk, m);
+    for(int k = 0; k < mm; ++k) {
+        //Tilling phase 1 (update C_kk)
+        int l1 = k;
+        int m1 = k;
+        int sub_base_l = l1 * L1;
+        int sub_base_m = m1 * L1;
+        int ipln = 0;
+        int jpm = 0;
+        int iplnpjpm = 0;
+        int kpbm = 0;
+        int kpbln = 0;
+        int iplnpkpbm = 0;
+        double max_c = 0.0;
+        __m256d a_v,c_v,b_v,apb_v,cmp_lt,res;
+        double a = 0.0, c = 0.0, apb=0.0;
+        int jp = 0;
+        for (int k = 0; k < L1; ++k) {
+            kpbm = k + sub_base_m;
+            kpbln = ((k + sub_base_l) * n);
+            for (int i = 0; i < L1; i += Bi) {
+                for (int j = 0; j < L1; j += Bj) {
+                    for(int ip = i; ip < i + Bi; ++ip) {
+                        ipln = ((ip + sub_base_l) * n);
+                        iplnpkpbm = ipln + kpbm;
+                        a = A[iplnpkpbm];
+                        a_v = _mm256_set1_pd(a);
+                        jp = j;
+                        for(; jp <= j + Bj - 4; jp += 4) {
+                            jpm = (jp + sub_base_m);
+                            iplnpjpm = ipln + jpm;
+                            c_v = _mm256_load_pd(C + iplnpjpm);
+                            b_v = _mm256_load_pd(B + kpbln + jpm);
+                            apb_v = _mm256_min_pd(a_v, b_v);
+                            res = _mm256_max_pd(c_v, apb_v);
+                            _mm256_store_pd(C + iplnpjpm, res);
+                        }
+                        for(; jp < j + Bj; ++jp) {
+                            jpm = (jp + sub_base_m);
+                            iplnpjpm = ipln + jpm;
+                            c = C[iplnpjpm];
+                            apb = a + B[kpbln + jpm];
+                            max_c = min(c, apb);
+                            C[iplnpjpm] = max_c;
+                        }
+                    }
+                }
+            }
+        }
+
+        //Tilling phase 2 (Update all tiles in same row as C_kk)
+        for(int j = 0; j < mm; ++j) {
+            if(j != k) {
+                //fwi_phase2_min_plus(A, B, C, n, k, j, L1, Bi, Bj);
+                int l2 = k;
+                int m2 = j;
+                int sub_base_l = l2 * L1;
+                int sub_base_m = m2 * L1;
+                int ipln = 0;
+                int jpm = 0;
+                int kl = 0;
+                int kln = 0;
+                int iplnkl = 0;
+                int iplnjpm = 0;
+                double apb = 0.0;
+                double max_c = 0.0;
+                double c = 0.0;
+                double a = 0.0;
+                __m256d a_v,c_v,b_v,apb_v,cmp_lt,res;
+                int jp = 0;
+                for (int k = 0; k < L1; ++k) {
+                    kl = (k + sub_base_l);
+                    kln = kl * n;
+                    for (int i = 0; i < L1; i += Bi) {
+                        for (int j = 0; j < L1; j += Bj) {
+                            for(int ip = i; ip < i + Bi; ++ip) {
+                                ipln = ((ip + sub_base_l) * n);
+                                iplnkl = ipln + kl;
+                                a = A[iplnkl];
+                                a_v = _mm256_set1_pd(a);
+                                jp = j;
+                                for(; jp <= j + Bj - 4; jp+=4) {
+                                    jpm = (jp + sub_base_m);
+                                    iplnjpm = ipln + jpm;
+                                    b_v = _mm256_load_pd(B + kln + jpm); 
+                                    apb_v = _mm256_min_pd(a_v, b_v);
+                                    c_v = _mm256_load_pd(C + iplnjpm);
+                                    res = _mm256_max_pd(c_v, apb_v);
+                                    _mm256_store_pd(C + iplnjpm, res);
+                                }
+                                for(; jp < j + Bj; ++jp) {
+                                    jpm = (jp + sub_base_m);
+                                    iplnjpm = ipln + jpm; 
+                                    apb = min(a, B[kln + jpm]);
+                                    c = C[iplnjpm];
+                                    max_c = max(c, apb);
+                                    C[iplnjpm] = max_c;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        //Tilling phase 3 (Update all tiles in same column as C_kk)
+        for(int i = 0; i < mm; ++i) {
+            if(i != k) {
+                int l3 = k;
+                int m3 = i;
+                int sub_base_l = l3 * L1;
+                int sub_base_m = m3 * L1;
+                int ipmn = 0;
+                int kl = 0;
+                int kln = 0;
+                int ipmnkl = 0;
+                int jpl = 0;
+                int ipmnjpl = 0;
+                int klnjpl = 0;
+                double apb = 0.0;
+                double c = 0.0;
+                double max_c = 0.0;
+                double a = 0.0;
+                int jp = 0;
+                __m256d a_v,c_v,b_v,apb_v,cmp_lt,res;
+                for (int k = 0; k < L1; ++k) {
+                    kl = (k + sub_base_l);
+                    kln = kl * n;
+                    for (int i = 0; i < L1; i += Bi) {
+                        for (int j = 0; j < L1; j += Bj) {
+                            for(int ip = i; ip < i + Bi; ++ip) {
+                                ipmn = ((ip + sub_base_m) * n);
+                                ipmnkl = ipmn + kl; 
+                                a = A[ipmnkl];
+                                a_v = _mm256_set1_pd(a);
+                                jp = j;
+                                for(; jp < j + Bj - 4; jp+=4) {
+                                    jpl = (jp + sub_base_l);
+                                    ipmnjpl = ipmn + jpl;
+                                    klnjpl = kln + jpl;
+                                    b_v = _mm256_load_pd(B + klnjpl);
+                                    apb_v = _mm256_add_pd(a_v, b_v);
+                                    apb_v = _mm256_min_pd(a_v, b_v);
+                                    res = _mm256_max_pd(c_v, apb_v);
+                                    _mm256_store_pd(C + ipmnjpl, res);
+                                }
+                                for(; jp < j + Bj; ++jp) {
+                                    jpl = (jp + sub_base_l);
+                                    ipmnjpl = ipmn + jpl;
+                                    klnjpl = kln + jpl;
+                                    apb = min(a, B[klnjpl]);
+                                    c = C[ipmnjpl];
+                                    max_c = max(c, apb);
+                                    C[ipmnjpl] = max_c;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        //Tilling phase 4 (Update all remaining tiles)
+        for(int i = 0; i < mm; ++i) {
+            if(i != k){
+                for(int j = 0; j < mm; ++j) {
+                    if(j != k) {
+                        int l4 = k, m4 = i, o4 = j;
+                        int sub_base_l = l4 * L1;
+                        int sub_base_m = m4 * L1;
+                        int sub_base_o = o4 * L1;
+
+                        int kpsubln = 0;
+                        int ipsubmn = 0;
+                        __m256d c_v, a_v, b_v, apb_v, cmp_lt, res;
+                        for (int i = 0; i < L1; i += Bi) {
+                            for (int j = 0; j < L1; j += Bj) {
+                                for (int k = 0; k < L1; k += Bk) {
+                                    for(int kp = k; kp < k + Bk; ++kp) {
+                                        kpsubln = (kp + sub_base_l) * n;
+                                        for(int ip = i; ip < i + Bi; ++ip) {
+                                            ipsubmn = (ip + sub_base_m) * n;
+                                            int jp = 0;
+                                            a_v = _mm256_set1_pd(A[ipsubmn + (kp + sub_base_l)]);
+                                            for(; jp <= j + Bj - 4; jp += 4) {
+                                                b_v = _mm256_load_pd(B + kpsubln + (jp + sub_base_o));
+                                                c_v = _mm256_load_pd(C + ipsubmn + (jp + sub_base_o));
+                                                apb_v = _mm256_min_pd(a_v, b_v);
+                                                res = _mm256_max_pd(c_v, apb_v);
+                                                _mm256_store_pd(C + ipsubmn + (jp + sub_base_o), res);
+                                            }
+                                            for(; jp < j + Bj; ++jp) {
+                                                C[ipsubmn + (jp + sub_base_o)] = max(
+                                                C[ipsubmn + (jp + sub_base_o)], 
+                                                min(A[ipsubmn + (kp + sub_base_l)], 
+                                                    B[((kp + sub_base_l) * n) + (jp + sub_base_o)]
+                                                ));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 int main(int argc, char **argv) {
     if(argc != 4)
         printf("Wrong\n");
@@ -295,11 +507,8 @@ int main(int argc, char **argv) {
 
     double *C = (double *)aligned_alloc(32, n*n*sizeof(double));
 
-    /*for(int i = 0; i < n*n; i++)
-        C[i] = i%3 == 0 ? 2.7 : (i%3 == 1 ? 3.2 : 0.3);*/
-
     printf("%d, %d, %d\n", n, L1, Bi);
-    opt_tiled_fw_min_plus(C, C, C, L1, n , Bi, Bj, Bk);
+    tiled_fw_max_min(C, C, C, L1, n , Bi, Bj, Bk);
 
     return 0;
 }
