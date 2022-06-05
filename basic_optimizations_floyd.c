@@ -32,6 +32,10 @@
 #define EPS  0.000001
 
 
+//============================================================================================
+// =============================== BASE IMPLEMENTATIONS ======================================
+//============================================================================================
+
 void fw_max_min(double *C, int n) {
     for (size_t k = 0; k < n; k++) {
         for (size_t i = 0; i < n; i++) {
@@ -62,6 +66,10 @@ void fw_or_and_int(u_int64_t *C, int n) {
         }
     }
 }
+
+//============================================================================================
+// =============================== BASIC OPTIMIZATIONS =======================================
+//============================================================================================
 
 void basic_optimization_to_plot_max_min(double *C, int n) {
     int in = 0;
@@ -95,8 +103,6 @@ void basic_optimization_to_plot_max_min(double *C, int n) {
     }
 }
 
-
-
 void basic_optimization_to_plot_or_and(u_int64_t *C, int n) {
     int in = 0;
     int kn = 0;
@@ -127,17 +133,6 @@ void basic_optimization_to_plot_or_and(u_int64_t *C, int n) {
             }
         }
     }
-}
-
-
-void print_bits(u_int64_t d){
-    unsigned char * bits = (unsigned char *) & d;
-    int i;
-
-    for (i = sizeof (u_int64_t) - 1; i >= 0 ; i--) {
-        printf ("%02X ", bits[i]);
-    }
-    printf ("\n");
 }
 
 void basic_optimization_to_plot_min_plus(double *C, int n) {
@@ -171,6 +166,8 @@ void basic_optimization_to_plot_min_plus(double *C, int n) {
         }
     }
 }
+
+//====================================================================================================
 
 void init_matrix(double *C, int n) {
     for (size_t i = 0; i < n; i++) {
@@ -250,7 +247,6 @@ double rdtsc(double *C, int n, void (*compute)(double*, int)) {
 }
 #endif
 
-
 #ifdef __x86_64__
 double rdtsc_int(uint64_t *C, int n, void (*compute)(uint64_t*, int)) {
     int i, num_runs;
@@ -288,7 +284,7 @@ double rdtsc_int(uint64_t *C, int n, void (*compute)(uint64_t*, int)) {
 }
 #endif
 
-static void (*fw[3]) (double*, int) = {fw_min_plus, fw_max_min, fw_max_min};
+static void (*fw[2]) (double*, int) = {fw_min_plus, fw_max_min};
 static void (*fw_intermediate[2]) (double*, int) = {basic_optimization_to_plot_min_plus,
                                                     basic_optimization_to_plot_max_min};
 
@@ -298,7 +294,7 @@ double benchmark(int fw_idx, int n) {
     if(fw_idx == 2) {
         uint64_t *C = (uint64_t *)malloc(n*n*sizeof(uint64_t));
         init_bit_matrix(C, n);
-        time = rdtsc_int(C, n, fw_or_and_int);
+        time = rdtsc_int(C, n, basic_optimization_to_plot_or_and);
         free(C);
     } else {
         double *C = (double *)malloc(n*n*sizeof(double));

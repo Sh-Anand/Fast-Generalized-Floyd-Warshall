@@ -1,6 +1,5 @@
 from subprocess import run
 
-import re
 import os
 from platform import system
 
@@ -17,16 +16,17 @@ executable_abs_path = os.path.join(THIS_FOLDER, "ffw")
 print(os.getcwd())
 fw = ["min_plus", "max_min", "or_and"] #functions in generalized floyd warshall
 
-run("gcc -o ffw " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", shell=True)
+run("gcc -o ffw " + file_abs_path + " tsc_x86.h -O0", shell=True)
+# run("gcc -o ffw " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", shell=True)
 
 
 for j in range(semi_rings):
 
     print("Benchmarking " + str(fw[j]))
-    with open("base_opt_results.csv", "a") as res_dump_file:
+    with open("flagO0_basic_opt.csv", "a") as res_dump_file:
         res_dump_file.write(str(fw[j]) + "\n")
 
-    MAX_N = (2**12)
+    MAX_N = (256)
     n = 4
     tmp_cycles = 0.0
 
@@ -43,7 +43,7 @@ for j in range(semi_rings):
         tmp_cycles = tmp_cycles / repetitions_for_confidence
 
         # Store results in case of crash
-        with open("base_opt_results.csv", "a") as res_dump_file:
+        with open("flagO0_basic_opt.csv", "a") as res_dump_file:
             csvres = "%d, %d, %lf\n" % (n, tmp_cycles, (2*(n**3) / tmp_cycles))
             res_dump_file.write(csvres)
 
