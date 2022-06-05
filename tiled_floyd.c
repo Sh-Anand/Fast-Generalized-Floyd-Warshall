@@ -780,29 +780,30 @@ double benchmark_tiled(int n, void (*baseline)(double*, double*, double*, int),
     int L1, int Bi, int Bj, int Bk
 ) {
 
-    double *C_base = (double *)malloc(n*n*sizeof(double));
+//    double *C_base = (double *)malloc(n*n*sizeof(double));
     double *C_opt = (double *)malloc(n*n*sizeof(double));
 
-    init_matrices(C_base, C_opt, n);
+//    init_matrices(C_base, C_opt, n);
 
-    printf("RECEIVED L1 : %d\n", L1);
-
-    double base = rdtsc_generalized(C_base, C_base, C_base, n, baseline);
-
-    printf("Time taken to run generalized : %f\n", base);
+//    printf("RECEIVED L1 : %d\n", L1);
+//
+//    double base = rdtsc_generalized(C_base, C_base, C_base, n, baseline);
+//
+//    printf("Time taken to run generalized : %f\n", base);
 
     double time = rdtsc_tiled(C_opt, C_opt, C_opt, n, L1, Bi, Bj, Bk, compute);
 
-    printf("Time taken to run tiled :       %f\n", time);
+//    printf("Time taken to run tiled :       %f\n", time);
+    printf("%lf\n", time);
 
     // Compare both 
-    for(int i = 0; i < n*n; ++i) {
-        assert(abs(C_opt[i] - C_base[i]) <= epsilon);
-    }
+//    for(int i = 0; i < n*n; ++i) {
+//        assert(abs(C_opt[i] - C_base[i]) <= epsilon);
+//    }
 
-    printf("Comparison passed!\n");
+//    printf("Comparison passed!\n");
 
-    free(C_base);
+//    free(C_base);
     free(C_opt);
 
     return time;
@@ -818,22 +819,23 @@ double benchmark_tiled_or(int n, void (*baseline)(uint64_t*, uint64_t*, uint64_t
 
     init_bit_matrices(C_base, C_opt, n);
 
-    printf("RECEIVED L1 : %d\n", L1);
-
-    double base = rdtsc_generalized_or(C_base, C_base, C_base, n, baseline);
-
-    printf("Time taken to run generalized : %f\n", base);
+//    printf("RECEIVED L1 : %d\n", L1);
+//
+//    double base = rdtsc_generalized_or(C_base, C_base, C_base, n, baseline);
+//
+//    printf("Time taken to run generalized : %f\n", base);
 
     double time = rdtsc_tiled_or(C_opt, C_opt, C_opt, n, L1, Bi, Bj, Bk, compute);
 
-    printf("Time taken to run tiled :       %f\n", time);
+//    printf("Time taken to run tiled :       %f\n", time);
+    printf("%lf\n", time);
 
     // Compare both 
-    for(int i = 0; i < n*n; ++i) {
-        assert(C_opt[i] == C_base[i]);
-    }
+//    for(int i = 0; i < n*n; ++i) {
+//        assert(C_opt[i] == C_base[i]);
+//    }
 
-    printf("Comparison passed!\n");
+//    printf("Comparison passed!\n");
 
     free(C_base);
     free(C_opt);
@@ -848,7 +850,7 @@ int main(int argc, char **argv) {
     int L1 = atoi(argv[3]);
     int Bi,Bj,Bk;
     Bi = Bj = Bk = atoi(argv[4]);
-    printf("n=%d \n",n);
+//    printf("n=%d \n",n);
 
     double r = 0;
 #ifdef __x86_64__
@@ -867,6 +869,6 @@ int main(int argc, char **argv) {
         break;
     }
 #endif
-    printf(" FW : RDTSC instruction:\n %lf cycles measured\n\n", r);
+//    printf(" FW : RDTSC instruction:\n %lf cycles measured\n\n", r);
     return 0;
 }

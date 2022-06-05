@@ -289,18 +289,32 @@ static void (*fw_intermediate[2]) (double*, int) = {basic_optimization_to_plot_m
                                                     basic_optimization_to_plot_max_min};
 
 
-double benchmark(int fw_idx, int n) {
+double benchmark(int baseline, int fw_idx, int n) {
     double time = 0;
-    if(fw_idx == 2) {
-        uint64_t *C = (uint64_t *)malloc(n*n*sizeof(uint64_t));
-        init_bit_matrix(C, n);
-        time = rdtsc_int(C, n, basic_optimization_to_plot_or_and);
-        free(C);
-    } else {
-        double *C = (double *)malloc(n*n*sizeof(double));
-        init_matrix(C, n);
-        time = rdtsc(C, n, fw_intermediate[fw_idx]);
-        free(C);
+    if(baseline == 0) {
+        if(fw_idx == 2) {
+            uint64_t *C = (uint64_t *)malloc(n*n*sizeof(uint64_t));
+            init_bit_matrix(C, n);
+            time = rdtsc_int(C, n, fw_or_and_int);
+            free(C);
+        } else {
+            double *C = (double *)malloc(n*n*sizeof(double));
+            init_matrix(C, n);
+            time = rdtsc(C, n, fw[fw_idx]);
+            free(C);
+        }
+    } else if(baseline == 1) {
+        if(fw_idx == 2) {
+            uint64_t *C = (uint64_t *)malloc(n*n*sizeof(uint64_t));
+            init_bit_matrix(C, n);
+            time = rdtsc_int(C, n, basic_optimization_to_plot_or_and);
+            free(C);
+        } else {
+            double *C = (double *)malloc(n*n*sizeof(double));
+            init_matrix(C, n);
+            time = rdtsc(C, n, fw_intermediate[fw_idx]);
+            free(C);
+        }
     }
     return time;
 }
@@ -377,20 +391,21 @@ void test_or_and(int n){
 
 
 int main(int argc, char **argv) {
-    if (argc!=3) {
-        printf("usage: FW <n> <fw> (fw = 0,1,2 = (min,plus), (max, min), (or,and))\n");
+    if (argc!=4) {
+        printf("usage: FW <n> <fw> <baseline> (fw = 0,1,2 = (min,plus), (max, min), (or,and); baseline = 0 (generalized), 1 (base opt)\n");
         return -1;
     }
 
     int n = atoi(argv[1]);
     int fw_idx = atoi(argv[2]);
+    int baseline = atoi(argv[3]);
     if (fw_idx < 0 || fw_idx > 2) {
         printf("usage: FW <n> <fw> (fw = 0,1,2 = (min,plus), (max, min), (or,and))\n");
         return -1;
     }
 
 #ifdef __x86_64__
-    double r  = benchmark(fw_idx, n);
+    double r  = benchmark(baseline, fw_idx, n);
     printf(" %lf", r);
 #endif
 

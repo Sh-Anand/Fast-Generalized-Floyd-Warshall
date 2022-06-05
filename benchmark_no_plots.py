@@ -6,7 +6,6 @@ from platform import system
 import sys
 from typing import Tuple
 
-from pytest import param
 
 def run_benchmark(n: int, l1: int, b: int) -> Tuple:
     repetitions_for_confidence = 5
@@ -71,6 +70,4 @@ else:
         #Update N
         n = n * 2
 
-
-    
 

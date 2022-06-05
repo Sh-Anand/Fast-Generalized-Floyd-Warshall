@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 
 x = [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
+x_1024 = [4, 8, 16, 32, 64, 128, 256, 512, 1024]
 x_O0 = [4, 8, 16, 32, 64, 128, 256]
 
 y_min_plus_baseline = [0.606635,
@@ -44,10 +45,42 @@ y_min_plus_opt_O0 = [0.156174,
                      0.114807,
                      0.116]
 
-# plt.plot(x, y_min_plus_baseline, label="baseline", linewidth=2.0)
-# plt.plot(x, y_min_plus_opt, label="basic optimization", linewidth=2.0)
-plt.plot(x_O0, y_min_plus_baseline_O0, label="baseline, flag -O0", linewidth=2.0)
-plt.plot(x_O0, y_min_plus_opt_O0, label="basic optimization, flag -O0", linewidth=2.0)
+# y_min_plus_tiled = [0.061104,
+#                    0.289789,
+#                    0.118275,
+#                    2.949813,
+#                    0.395441,
+#                    0.333805,
+#                    1.113129,
+#                    0.057261,
+#                    0.53503]
+
+y_min_plus_tiled = [0.064013,
+                    0.291406,
+                    0.116099,
+                    2.222825,
+                    0.231871,
+                    0.2278,
+                    0.996664,
+                    0.063114,
+                    0.597108]
+
+y_min_plus_tiled_vect= [0.011541,
+                        0.069353,
+                        0.042526,
+                        1.935419,
+                        0.157113,
+                        0.142539,
+                        1.005321,
+                        0.030018,
+                        1.444535]
+
+plt.plot(x, y_min_plus_baseline, label="baseline", linewidth=2.0)
+plt.plot(x, y_min_plus_opt, label="basic optimization", linewidth=2.0)
+plt.plot(x_1024, y_min_plus_tiled, label="tiled", linewidth=2.0)
+plt.plot(x_1024, y_min_plus_tiled_vect, label="tiled vectorized", linewidth=2.0)
+# plt.plot(x_O0, y_min_plus_baseline_O0, label="baseline, flag -O0", linewidth=2.0)
+# plt.plot(x_O0, y_min_plus_opt_O0, label="basic optimization, flag -O0", linewidth=2.0)
 plt.legend()
 plt.title("min plus base optimization")
 plt.xscale('log')
