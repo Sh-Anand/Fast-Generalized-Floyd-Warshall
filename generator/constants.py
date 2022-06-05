@@ -1,16 +1,10 @@
-//code largely repurposed from HW1
-//#error Please comment out the next two lines under linux, then comment this error
-//#include "stdafx.h"  //Visual studio expects this line to be the first one, comment out if different compiler
+program = '''
 
 #ifdef linux
 #define min(X, Y)  ((X) < (Y) ? (X) : (Y))
 #define max(X, Y)  ((X) > (Y) ? (X) : (Y))
 #endif
 
-// #ifndef WIN32
-// #include <sys/time.h>
-// #include <windows.h> 
-// #endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
@@ -87,7 +81,6 @@ void base_fwi_abc_min_plus(double* A, double* B, double* C, int n, int l, int m,
 // NOTE All functions are inlined
 void tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int Bi, int Bj, int Bk) {
     int mm = n / L1;
-    // printf("L1 : %d, Bi : %d, Bj : %d, Bk : %d, m : %d\n", L1, Bi, Bj, Bk, m);
     for(int k = 0; k < mm; ++k) {
         //Tilling phase 1 (update C_kk)
         int l1 = k;
@@ -299,7 +292,6 @@ void tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int Bi, i
 
 void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int Bi, int Bj, int Bk) {
     int mm = n / L1;
-    // printf("L1 : %d, Bi : %d, Bj : %d, Bk : %d, m : %d\n", L1, Bi, Bj, Bk, m);
     for(int k = 0; k < mm; ++k) {
         //Tilling phase 1 (update C_kk)
         int l1 = k;
@@ -699,28 +691,18 @@ double benchmark_tiled_timed(int n, void (*baseline)(double*, double*, double*, 
 
     init_matrices(C_base, C_opt, n);
 
-    printf("RECEIVED L1 : %d\n", L1);
-
-    // Run baseline function on C
-    //baseline(C_base, C_base, C_base, n);
-
-    // Run optimized function on C
-    //compute(C_opt, C_opt, C_opt, L1, n, Bi, Bj, Bk);
-
     double base = rdtsc_generalized(C_base, C_base, C_base, n, baseline);
 
-    printf("Time taken to run generalized : %f\n", base);
+    printf(\"%f \", base);
 
     double time = rdtsc_tiled(C_opt, C_opt, C_opt, n, L1, Bi, Bj, Bk, compute);
 
-    printf("Time taken to run tiled       : %f\n", time);
+    printf("%f \", time);
 
     // Compare both 
     for(int i = 0; i < n*n; ++i) {
         assert(abs(C_opt[i] - C_base[i]) <= epsilon);
     }
-
-    printf("Comparison passed!\n");
 
     free(C_base);
     free(C_opt);
@@ -729,21 +711,15 @@ double benchmark_tiled_timed(int n, void (*baseline)(double*, double*, double*, 
 }
 
 int main(int argc, char **argv) {
-    if (argc != 4) {
-        printf("usage: FW <n> <L1> <B> \n"); 
-        return -1;
-    }
     int n = atoi(argv[1]);
     int L1 = atoi(argv[2]);
     int Bi,Bj,Bk;
     Bi = Bj = Bk = atoi(argv[3]);
-    printf("n=%d \n",n);
 
 #ifdef __x86_64__
     double r1 = benchmark_tiled_timed(n, fw_abc_min_plus, opt_tiled_fw_min_plus, L1, Bi, Bj, Bk);
     double r = benchmark_tiled_timed(n, fw_abc_min_plus, tiled_fw_min_plus, L1, Bi, Bj, Bk);
-    printf(" FW : RDTSC instruction:\n %lf cycles measured\n\n", r);
 #endif
 
     return 0;
-}
+}'''
