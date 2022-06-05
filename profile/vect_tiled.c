@@ -295,8 +295,8 @@ int main(int argc, char **argv) {
 
     double *C = (double *)aligned_alloc(32, n*n*sizeof(double));
 
-    for(int i = 0; i < n*n; i++)
-        C[i] = i%3 == 0 ? 2.7 : (i%3 == 1 ? 3.2 : 0.3);
+    /*for(int i = 0; i < n*n; i++)
+        C[i] = i%3 == 0 ? 2.7 : (i%3 == 1 ? 3.2 : 0.3);*/
 
     printf("%d, %d, %d\n", n, L1, Bi);
     opt_tiled_fw_min_plus(C, C, C, L1, n , Bi, Bj, Bk);
