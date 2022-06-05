@@ -307,7 +307,19 @@ void tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int Bi, i
     }
 }
 
-void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int Bi, int Bj, int Bk) {
+/**
+ * @brief Tiled FW implementation for MAX_MIN
+ * @param A, the first operand matrix
+ * @param B, the second operand matrix
+ * @param C, the result matrix
+ * @param L1, the tile size L1xL1 of the matrix
+ * @param n, the size of the NxN matrices
+ * @param Bi, tilling factor over i
+ * @param Bj, tilling factor over j
+ * @param Bk, tilling factor over k
+ */
+// NOTE All functions are inlined
+void tiled_fw_max_min(double* A, double* B, double* C, int L1, int n, int Bi, int Bj, int Bk) {
     int mm = n / L1;
     // printf("L1 : %d, Bi : %d, Bj : %d, Bk : %d, m : %d\n", L1, Bi, Bj, Bk, m);
     for(int k = 0; k < mm; ++k) {
@@ -317,22 +329,15 @@ void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int B
         int sub_base_l = l1 * L1;
         int sub_base_m = m1 * L1;
         int ipln = 0;
+        int jpm = 0;
+        int iplnpjpm = 0;
         int kpbm = 0;
         int kpbln = 0;
         int iplnpkpbm = 0;
-        double min_c = 0.0;
-        __m256d a_v;
+        double max_c = 0.0;
+        __m256d a_v,c_v,b_v,apb_v,cmp_lt,res;
         double a = 0.0, c = 0.0, apb=0.0;
         int jp = 0;
-
-        int jpm = 0;
-        int iplnpjpm = 0;
-        __m256d c_v,b_v,apb_v,cmp_lt,res;
-
-        int jpm1 = 0;
-        int iplnpjpm1 = 0;
-        __m256d c_v1,b_v1,apb_v1,cmp_lt1,res1;
-
         for (int k = 0; k < L1; ++k) {
             kpbm = k + sub_base_m;
             kpbln = ((k + sub_base_l) * n);
@@ -344,33 +349,22 @@ void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int B
                         a = A[iplnpkpbm];
                         a_v = _mm256_set1_pd(a);
                         jp = j;
-                        jpm = (jp + sub_base_m);    
-                        jpm1 = (jp + sub_base_m + 4);
-                        for(; jp <= j + Bj - 4; jp += 8) {
+                        for(; jp <= j + Bj - 4; jp += 4) {
+                            jpm = (jp + sub_base_m);
                             iplnpjpm = ipln + jpm;
                             c_v = _mm256_load_pd(C + iplnpjpm);
                             b_v = _mm256_load_pd(B + kpbln + jpm);
-                            apb_v = _mm256_add_pd(a_v, b_v);
-                            res = _mm256_min_pd(c_v, apb_v);
+                            apb_v = _mm256_min_pd(a_v, b_v);
+                            res = _mm256_max_pd(c_v, apb_v);
                             _mm256_store_pd(C + iplnpjpm, res);
-
-                            iplnpjpm1 = ipln + jpm1;
-                            c_v1 = _mm256_load_pd(C + iplnpjpm1);
-                            b_v1 = _mm256_load_pd(B + kpbln + jpm1);
-                            apb_v1 = _mm256_add_pd(a_v, b_v1);
-                            res1 = _mm256_min_pd(c_v1, apb_v1);
-                            _mm256_store_pd(C + iplnpjpm1, res1);
-
-                            jpm += 8;
-                            jpm1 += 8;
                         }
                         for(; jp < j + Bj; ++jp) {
                             jpm = (jp + sub_base_m);
                             iplnpjpm = ipln + jpm;
                             c = C[iplnpjpm];
                             apb = a + B[kpbln + jpm];
-                            min_c = min(c, apb);
-                            C[iplnpjpm] = min_c;
+                            max_c = min(c, apb);
+                            C[iplnpjpm] = max_c;
                         }
                     }
                 }
@@ -386,25 +380,17 @@ void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int B
                 int sub_base_l = l2 * L1;
                 int sub_base_m = m2 * L1;
                 int ipln = 0;
+                int jpm = 0;
                 int kl = 0;
                 int kln = 0;
                 int iplnkl = 0;
+                int iplnjpm = 0;
                 double apb = 0.0;
-                double min_c = 0.0;
+                double max_c = 0.0;
                 double c = 0.0;
                 double a = 0.0;
-
-                __m256d a_v;
+                __m256d a_v,c_v,b_v,apb_v,cmp_lt,res;
                 int jp = 0;
-
-                __m256d c_v,b_v,apb_v,cmp_lt,res;
-                int iplnjpm = 0, jpm = 0;    
-
-                __m256d c_v1,b_v1,apb_v1,cmp_lt1,res1;
-                int iplnjpm1 = 0, jpm1 = 0;
-
-                double *Bkj, *Bkj1;
-
                 for (int k = 0; k < L1; ++k) {
                     kl = (k + sub_base_l);
                     kln = kl * n;
@@ -416,37 +402,22 @@ void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int B
                                 a = A[iplnkl];
                                 a_v = _mm256_set1_pd(a);
                                 jp = j;
-                                jpm = (jp + sub_base_m);
-                                jpm1 = jpm + 4;
-                                iplnjpm = ipln + jpm;
-                                iplnjpm1 = ipln + jpm1;
-                                Bkj = B + kln + jpm;
-                                Bkj1 = B + kln + jpm1;
-                                for(; jp <= j + Bj - 4; jp+=8) {
-                                    b_v = _mm256_load_pd(Bkj); 
-                                    apb_v = _mm256_add_pd(a_v, b_v);
+                                for(; jp <= j + Bj - 4; jp+=4) {
+                                    jpm = (jp + sub_base_m);
+                                    iplnjpm = ipln + jpm;
+                                    b_v = _mm256_load_pd(B + kln + jpm); 
+                                    apb_v = _mm256_min_pd(a_v, b_v);
                                     c_v = _mm256_load_pd(C + iplnjpm);
-                                    res = _mm256_min_pd(c_v, apb_v);
+                                    res = _mm256_max_pd(c_v, apb_v);
                                     _mm256_store_pd(C + iplnjpm, res);
-
-                                    b_v1 = _mm256_load_pd(Bkj1); 
-                                    apb_v1 = _mm256_add_pd(a_v, b_v1);
-                                    c_v1 = _mm256_load_pd(C + iplnjpm1);
-                                    res1 = _mm256_min_pd(c_v1, apb_v1);
-                                    _mm256_store_pd(C + iplnjpm1, res1);
-
-                                    iplnjpm += 8;
-                                    iplnjpm1 += 8;
-                                    Bkj += 8;
-                                    Bkj1 += 8;
                                 }
                                 for(; jp < j + Bj; ++jp) {
                                     jpm = (jp + sub_base_m);
                                     iplnjpm = ipln + jpm; 
-                                    apb = a + B[kln + jpm];
+                                    apb = min(a, B[kln + jpm]);
                                     c = C[iplnjpm];
-                                    min_c = min(c, apb);
-                                    C[iplnjpm] = min_c;
+                                    max_c = max(c, apb);
+                                    C[iplnjpm] = max_c;
                                 }
                             }
                         }
@@ -466,19 +437,15 @@ void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int B
                 int kl = 0;
                 int kln = 0;
                 int ipmnkl = 0;
-                int jp = 0;
+                int jpl = 0;
+                int ipmnjpl = 0;
+                int klnjpl = 0;
                 double apb = 0.0;
                 double c = 0.0;
-                double min_c = 0.0;
+                double max_c = 0.0;
                 double a = 0.0;
-                __m256d a_v;
-
-
-                int jpl = 0, ipmnjpl = 0, klnjpl = 0;
-                __m256d c_v,b_v,apb_v,cmp_lt,res;
-
-                int jpl1 = 0, ipmnjpl1 = 0, klnjpl1 = 0;
-                __m256d c_v1,b_v1,apb_v1,cmp_lt1,res1;
+                int jp = 0;
+                __m256d a_v,c_v,b_v,apb_v,cmp_lt,res;
                 for (int k = 0; k < L1; ++k) {
                     kl = (k + sub_base_l);
                     kln = kl * n;
@@ -490,36 +457,24 @@ void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int B
                                 a = A[ipmnkl];
                                 a_v = _mm256_set1_pd(a);
                                 jp = j;
-                                jpl = j + sub_base_l;
-                                jpl1 = j + sub_base_l + 4;
-                                for(; jp < j + Bj - 8; jp+=8) {
+                                for(; jp < j + Bj - 4; jp+=4) {
+                                    jpl = (jp + sub_base_l);
                                     ipmnjpl = ipmn + jpl;
                                     klnjpl = kln + jpl;
                                     b_v = _mm256_load_pd(B + klnjpl);
                                     apb_v = _mm256_add_pd(a_v, b_v);
-                                    c_v = _mm256_load_pd(C + ipmnjpl);
-                                    res = _mm256_min_pd(c_v, apb_v);
+                                    apb_v = _mm256_min_pd(a_v, b_v);
+                                    res = _mm256_max_pd(c_v, apb_v);
                                     _mm256_store_pd(C + ipmnjpl, res);
-
-                                    ipmnjpl1 = ipmn + jpl1;
-                                    klnjpl1 = kln + jpl1;
-                                    b_v1 = _mm256_load_pd(B + klnjpl1);
-                                    apb_v1 = _mm256_add_pd(a_v, b_v1);
-                                    c_v1 = _mm256_load_pd(C + ipmnjpl1);
-                                    res1 = _mm256_min_pd(c_v1, apb_v1);
-                                    _mm256_store_pd(C + ipmnjpl1, res1);
-
-                                    jpl += 8;
-                                    jpl1 += 8;
                                 }
                                 for(; jp < j + Bj; ++jp) {
                                     jpl = (jp + sub_base_l);
                                     ipmnjpl = ipmn + jpl;
                                     klnjpl = kln + jpl;
-                                    apb = a + B[klnjpl];
+                                    apb = min(a, B[klnjpl]);
                                     c = C[ipmnjpl];
-                                    min_c = min(c, apb);
-                                    C[ipmnjpl] = min_c;
+                                    max_c = max(c, apb);
+                                    C[ipmnjpl] = max_c;
                                 }
                             }
                         }
@@ -538,64 +493,31 @@ void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int B
                         int sub_base_m = m4 * L1;
                         int sub_base_o = o4 * L1;
 
-                        int iBi = 0, jBj4 = 0, jBj = 0, kBk = 0;
-
-                        int kpsubln = 0, ipsubmn = 0;
-                        int kpsubl = 0;
-                        
-                        
-                        int jpsubo = 0, jp = 0;
-                        double *B_k, *C_i, *B_k_j, *C_i_j;
+                        int kpsubln = 0;
+                        int ipsubmn = 0;
                         __m256d c_v, a_v, b_v, apb_v, cmp_lt, res;
-
-                        int jpsubo1 = 0, jp1 = 0;
-                        double *B_k_j1, *C_i_j1;
-                        __m256d c_v1, b_v1, apb_v1, cmp_lt1, res1;
                         for (int i = 0; i < L1; i += Bi) {
-                            iBi = i + Bi;
                             for (int j = 0; j < L1; j += Bj) {
-                                jBj = j + Bj;
-                                jBj4 = jBj - 4;
                                 for (int k = 0; k < L1; k += Bk) {
-                                    kBk = k + Bk;
-                                    for(int kp = k; kp < kBk; ++kp) {
-                                        kpsubl = kp + sub_base_l;
-                                        kpsubln = (kpsubl) * n;
-                                        B_k = B + kpsubln;
-                                        for(int ip = i; ip < iBi; ++ip) {
+                                    for(int kp = k; kp < k + Bk; ++kp) {
+                                        kpsubln = (kp + sub_base_l) * n;
+                                        for(int ip = i; ip < i + Bi; ++ip) {
                                             ipsubmn = (ip + sub_base_m) * n;
-                                            C_i = C + ipsubmn; 
-                                            jpsubo = sub_base_o;
-                                            jpsubo1 = jpsubo + 4;
-                                            jp = 0;
-                                            a_v = _mm256_set1_pd(A[ipsubmn + kpsubl]);
-                                            for(; jp <= jBj4; jp += 8) {
-                                                B_k_j = B_k + jpsubo;
-                                                C_i_j = C_i + jpsubo;
-                                                b_v = _mm256_load_pd(B_k_j);
-                                                c_v = _mm256_load_pd(C_i_j);
-                                                apb_v = _mm256_add_pd(a_v, b_v);
-                                                res = _mm256_min_pd(c_v, apb_v);
-                                                _mm256_store_pd(C_i_j, res);
-
-                                                jpsubo+=8;
-
-                                                B_k_j1 = B_k + jpsubo1;
-                                                C_i_j1 = C_i + jpsubo1;
-                                                b_v1 = _mm256_load_pd(B_k_j1);
-                                                c_v1 = _mm256_load_pd(C_i_j1);
-                                                apb_v1 = _mm256_add_pd(a_v, b_v1);
-                                                res1 = _mm256_min_pd(c_v1, apb_v1);
-                                                _mm256_store_pd(C_i_j1, res1);
-
-                                                jpsubo1+=8;
+                                            int jp = 0;
+                                            a_v = _mm256_set1_pd(A[ipsubmn + (kp + sub_base_l)]);
+                                            for(; jp <= j + Bj - 4; jp += 4) {
+                                                b_v = _mm256_load_pd(B + kpsubln + (jp + sub_base_o));
+                                                c_v = _mm256_load_pd(C + ipsubmn + (jp + sub_base_o));
+                                                apb_v = _mm256_min_pd(a_v, b_v);
+                                                res = _mm256_max_pd(c_v, apb_v);
+                                                _mm256_store_pd(C + ipsubmn + (jp + sub_base_o), res);
                                             }
                                             for(; jp < j + Bj; ++jp) {
-                                                C[ipsubmn + (jp + sub_base_o)] = min(
+                                                C[ipsubmn + (jp + sub_base_o)] = max(
                                                 C[ipsubmn + (jp + sub_base_o)], 
-                                                A[ipsubmn + (kp + sub_base_l)] + 
+                                                min(A[ipsubmn + (kp + sub_base_l)], 
                                                     B[((kp + sub_base_l) * n) + (jp + sub_base_o)]
-                                                );
+                                                ));
                                             }
                                         }
                                     }
@@ -608,6 +530,8 @@ void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int B
         }
     }
 }
+
+
 
 /**
  * @brief Tiled FW implementation for MIN_PLUS
