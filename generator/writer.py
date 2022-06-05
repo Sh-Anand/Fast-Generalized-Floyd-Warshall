@@ -1,4 +1,99 @@
+counter = 4
+phase_1_vars = ["int jpm", "int iplnpjpm", "__m256d c_v", "__m256d b_v", "__m256d apb_v", "__m256d cmp_lt", "__m256d res"]
+phase_2_vars = ["int jpm", "int iplnjpm", "__m256d c_v", "__m256d b_v", "__m256d apb_v", "__m256d cmp_lt", "__m256d res", "double *Bkj"]
+phase_3_vars = ["int jpl", "int ipmnjpl", "int klnjpl", "__m256d c_v", "__m256d b_v", "__m256d apb_v", "__m256d cmp_lt", "__m256d res"]
+phase_4_vars = ["int jp", "int jpsubo", "__m256d c_v", "__m256d b_v", "__m256d apb_v", "__m256d cmp_lt", "__m256d res", "double *B_k_j", "double *C_i_j"]
 
+def generate_vars(vars, unroll):
+    phase_1_u_vars = ""
+    for i in range(unroll):
+        id = str(i)
+        for var in vars:
+            phase_1_u_vars = phase_1_u_vars + var + id + ";"
+        phase_1_u_vars = phase_1_u_vars + "\n"
+    return phase_1_u_vars
+
+def generate_phase_1_innermost_loop(unroll):
+    phase_1_body = ""
+
+    for i in range(unroll):
+        phase_1_body = phase_1_body + "jpm"+str(i)+" = (jp + sub_base_m + "+str(i*counter)+");\n"
+    
+    phase_1_body = phase_1_body + "for(; jp <= j + Bj - 4; jp += "+str(unroll*counter)+") {\n"
+    for i in range(unroll):
+        id = str(i)
+        phase_1_body = phase_1_body  + "iplnpjpm"+id+" = ipln + jpm"+id+";\n" + "c_v"+id+" = _mm256_load_pd(C + iplnpjpm"+id+");\n" \
+                                                                 + "b_v"+id+" = _mm256_load_pd(B + kpbln + jpm"+id+");\n" \
+                                                                 + "apb_v"+id+" = _mm256_add_pd(a_v, b_v"+id+");\n"  \
+                                                                 + "res"+id+" = _mm256_min_pd(c_v"+id+", apb_v"+id+");\n"  \
+                                                                 + "_mm256_store_pd(C + iplnpjpm"+id+", res"+id+");\n" \
+                                                                 + "jpm"+id+" += "+str((unroll) * counter)+";\n"
+    
+    phase_1_body = phase_1_body + "}"
+    return phase_1_body
+
+def generate_phase_2_innermost_loop(unroll):
+    phase_2_body = ""
+    for i in range(unroll):
+        id = str(i)
+        phase_2_body = phase_2_body + "jpm"+id+" = (jp + sub_base_m + "+str(i*counter)+"); iplnjpm" +id+"= ipln + jpm"+id+"; Bkj"+id+"=B + kln + jpm"+id+";\n"
+
+    phase_2_body = phase_2_body + "for(; jp <= j + Bj - "+str(unroll*counter)+"; jp += "+str(unroll*counter)+") {\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_2_body = phase_2_body + "b_v"+id+" = _mm256_load_pd(Bkj"+id+")\n;" + "apb_v"+id+" = _mm256_add_pd(a_v, b_v"+id+")\n; c_v"+id+" = _mm256_load_pd(C + iplnjpm"+id+")\n;" \
+                                            + "res"+id+" = _mm256_min_pd(c_v"+id+", apb_v"+id+");\n" \
+                                            + "_mm256_store_pd(C + iplnjpm"+id+", res"+id+")\n; iplnjpm"+id+" += "+str(unroll*counter)+"\n; Bkj"+id+" += "+str(unroll*counter)+"\n;" 
+    
+    phase_2_body = phase_2_body + "}\n"
+    return phase_2_body
+    
+def generate_phase_3_innermost_loop(unroll):
+    phase_3_body = ""
+
+    for i in range(unroll):
+        phase_3_body = phase_3_body + "jpl"+str(i)+" = (jp + sub_base_l + "+str(i*counter)+");\n"
+
+    phase_3_body = phase_3_body + "for(; jp <= j + Bj - "+str(unroll*counter)+"; jp += "+str(unroll*counter)+") {"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_3_body = phase_3_body +"ipmnjpl"+id+" = ipmn + jpl"+id+";\n" \
+                                    +"klnjpl"+id+" = kln + jpl"+id+";\n" \
+                                    +"b_v"+id+" = _mm256_load_pd(B + klnjpl"+id+");\n" \
+                                    +"apb_v"+id+" = _mm256_add_pd(a_v, b_v"+id+");\n" \
+                                    +"c_v"+id+" = _mm256_load_pd(C + ipmnjpl"+id+");\n" \
+                                    +"res"+id+" = _mm256_min_pd(c_v"+id+", apb_v"+id+");\n" + "_mm256_store_pd(C + ipmnjpl"+id+", res"+id+");\n" \
+                                    +"jpl"+id+" += "+str(unroll*counter)+";\n"
+
+    phase_3_body = phase_3_body + "}"
+    return phase_3_body
+
+def generate_phase_4_innermost_loop(unroll):
+    phase_4_body = ""
+
+    for i in range(unroll):
+        phase_4_body = phase_4_body + "jpsubo"+str(i)+" = (sub_base_o + "+str(i*counter)+");\n"
+
+    phase_4_body = phase_4_body + "for(; jp <= jBj4; jp += "+str(unroll*counter)+") {"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_4_body = phase_4_body + "B_k_j"+id+" = B_k + jpsubo"+id+"; C_i_j"+id+" = C_i + jpsubo"+id+";\n" \
+                                    + "b_v"+id+" = _mm256_load_pd(B_k_j"+id+");\n"\
+                                    + "c_v"+id+" = _mm256_load_pd(C_i_j"+id+");\n"\
+                                    + "apb_v"+id+" = _mm256_add_pd(a_v, b_v"+id+");\n"\
+                                    + "res"+id+" = _mm256_min_pd(c_v"+id+", apb_v"+id+");\n"\
+                                    + "_mm256_store_pd(C_i_j"+id+", res"+id+");\n"\
+                                    + "jpsubo"+id+"+="+str(unroll*counter)+";\n"
+
+    phase_4_body = phase_4_body + "}"
+    return phase_4_body
+
+
+def generate_program(unroll):
+    program = '''
     #ifdef linux
     #define min(X, Y)  ((X) < (Y) ? (X) : (Y))
     #define max(X, Y)  ((X) > (Y) ? (X) : (Y))
@@ -58,9 +153,8 @@
             __m256d a_v;
             double a = 0.0, c = 0.0, apb=0.0;
             int jp = 0;
-            int jpm0;int iplnpjpm0;__m256d c_v0;__m256d b_v0;__m256d apb_v0;__m256d cmp_lt0;__m256d res0;
-int jpm1;int iplnpjpm1;__m256d c_v1;__m256d b_v1;__m256d apb_v1;__m256d cmp_lt1;__m256d res1;
-         
+            ''' + generate_vars(phase_1_vars, unroll) \
+            +'''         
             for (int k = 0; k < L1; ++k) {
                 kpbm = k + sub_base_m;
                 kpbln = ((k + sub_base_l) * n);
@@ -72,24 +166,8 @@ int jpm1;int iplnpjpm1;__m256d c_v1;__m256d b_v1;__m256d apb_v1;__m256d cmp_lt1;
                             a = A[iplnpkpbm];
                             a_v = _mm256_set1_pd(a);
                             jp = j; 
-                        jpm0 = (jp + sub_base_m + 0);
-jpm1 = (jp + sub_base_m + 4);
-for(; jp <= j + Bj - 4; jp += 8) {
-iplnpjpm0 = ipln + jpm0;
-c_v0 = _mm256_load_pd(C + iplnpjpm0);
-b_v0 = _mm256_load_pd(B + kpbln + jpm0);
-apb_v0 = _mm256_add_pd(a_v, b_v0);
-res0 = _mm256_min_pd(c_v0, apb_v0);
-_mm256_store_pd(C + iplnpjpm0, res0);
-jpm0 += 8;
-iplnpjpm1 = ipln + jpm1;
-c_v1 = _mm256_load_pd(C + iplnpjpm1);
-b_v1 = _mm256_load_pd(B + kpbln + jpm1);
-apb_v1 = _mm256_add_pd(a_v, b_v1);
-res1 = _mm256_min_pd(c_v1, apb_v1);
-_mm256_store_pd(C + iplnpjpm1, res1);
-jpm1 += 8;
-}    
+                        ''' + generate_phase_1_innermost_loop(unroll) \
+                            +'''    
                             for(; jp < j + Bj; ++jp) {
                                 jpm0 = (jp + sub_base_m);
                                 iplnpjpm0 = ipln + jpm0;
@@ -121,9 +199,9 @@ jpm1 += 8;
 
                     __m256d a_v;
                     int jp = 0;
-                int jpm0;int iplnjpm0;__m256d c_v0;__m256d b_v0;__m256d apb_v0;__m256d cmp_lt0;__m256d res0;double *Bkj0;
-int jpm1;int iplnjpm1;__m256d c_v1;__m256d b_v1;__m256d apb_v1;__m256d cmp_lt1;__m256d res1;double *Bkj1;
-
+                ''' \
+                + generate_vars(phase_2_vars, unroll) \
+                +  '''
                     for (int k = 0; k < L1; ++k) {
                         kl = (k + sub_base_l);
                         kln = kl * n;
@@ -135,25 +213,8 @@ int jpm1;int iplnjpm1;__m256d c_v1;__m256d b_v1;__m256d apb_v1;__m256d cmp_lt1;_
                                     a = A[iplnkl];
                                     a_v = _mm256_set1_pd(a);
                                     jp = j;
-                                jpm0 = (jp + sub_base_m + 0); iplnjpm0= ipln + jpm0; Bkj0=B + kln + jpm0;
-jpm1 = (jp + sub_base_m + 4); iplnjpm1= ipln + jpm1; Bkj1=B + kln + jpm1;
-for(; jp <= j + Bj - 8; jp += 8) {
-b_v0 = _mm256_load_pd(Bkj0)
-;apb_v0 = _mm256_add_pd(a_v, b_v0)
-; c_v0 = _mm256_load_pd(C + iplnjpm0)
-;res0 = _mm256_min_pd(c_v0, apb_v0);
-_mm256_store_pd(C + iplnjpm0, res0)
-; iplnjpm0 += 8
-; Bkj0 += 8
-;b_v1 = _mm256_load_pd(Bkj1)
-;apb_v1 = _mm256_add_pd(a_v, b_v1)
-; c_v1 = _mm256_load_pd(C + iplnjpm1)
-;res1 = _mm256_min_pd(c_v1, apb_v1);
-_mm256_store_pd(C + iplnjpm1, res1)
-; iplnjpm1 += 8
-; Bkj1 += 8
-;}
-
+                                ''' + generate_phase_2_innermost_loop(unroll) \
+                                +'''
                                     for(; jp < j + Bj; ++jp) {
                                         jpm0 = (jp + sub_base_m);
                                         iplnjpm0 = ipln + jpm0; 
@@ -186,9 +247,7 @@ _mm256_store_pd(C + iplnjpm1, res1)
                     double a = 0.0;
                     __m256d a_v;
 
-                    int jpl0;int ipmnjpl0;int klnjpl0;__m256d c_v0;__m256d b_v0;__m256d apb_v0;__m256d cmp_lt0;__m256d res0;
-int jpl1;int ipmnjpl1;int klnjpl1;__m256d c_v1;__m256d b_v1;__m256d apb_v1;__m256d cmp_lt1;__m256d res1;
-
+                    ''' + generate_vars(phase_3_vars, unroll) + '''
                     for (int k = 0; k < L1; ++k) {
                         kl = (k + sub_base_l);
                         kln = kl * n;
@@ -200,25 +259,7 @@ int jpl1;int ipmnjpl1;int klnjpl1;__m256d c_v1;__m256d b_v1;__m256d apb_v1;__m25
                                     a = A[ipmnkl];
                                     a_v = _mm256_set1_pd(a);
                                     jp = j;
-                                    jpl0 = (jp + sub_base_l + 0);
-jpl1 = (jp + sub_base_l + 4);
-for(; jp <= j + Bj - 8; jp += 8) {ipmnjpl0 = ipmn + jpl0;
-klnjpl0 = kln + jpl0;
-b_v0 = _mm256_load_pd(B + klnjpl0);
-apb_v0 = _mm256_add_pd(a_v, b_v0);
-c_v0 = _mm256_load_pd(C + ipmnjpl0);
-res0 = _mm256_min_pd(c_v0, apb_v0);
-_mm256_store_pd(C + ipmnjpl0, res0);
-jpl0 += 8;
-ipmnjpl1 = ipmn + jpl1;
-klnjpl1 = kln + jpl1;
-b_v1 = _mm256_load_pd(B + klnjpl1);
-apb_v1 = _mm256_add_pd(a_v, b_v1);
-c_v1 = _mm256_load_pd(C + ipmnjpl1);
-res1 = _mm256_min_pd(c_v1, apb_v1);
-_mm256_store_pd(C + ipmnjpl1, res1);
-jpl1 += 8;
-}
+                                    ''' + generate_phase_3_innermost_loop(unroll) + '''
                                     for(; jp < j + Bj; ++jp) {
                                         jpl0 = (jp + sub_base_l);
                                         ipmnjpl0 = ipmn + jpl0;
@@ -250,14 +291,12 @@ jpl1 += 8;
                             int kpsubl = 0;
                             
                             double *C_i, *B_k;
-                        int jp0;int jpsubo0;__m256d c_v0;__m256d b_v0;__m256d apb_v0;__m256d cmp_lt0;__m256d res0;double *B_k_j0;double *C_i_j0;
-int jp1;int jpsubo1;__m256d c_v1;__m256d b_v1;__m256d apb_v1;__m256d cmp_lt1;__m256d res1;double *B_k_j1;double *C_i_j1;
-
+                        ''' + generate_vars(phase_4_vars, unroll) + '''
                             for (int i = 0; i < L1; i += Bi) {
                                 iBi = i + Bi;
                                 for (int j = 0; j < L1; j += Bj) {
                                     jBj = j + Bj;
-                                    jBj4 = jBj - 8;
+                                    jBj4 = jBj - ''' + str(unroll * 4) + ''';
                                     for (int k = 0; k < L1; k += Bk) {
                                         kBk = k + Bk;
                                         for(int kp = k; kp < kBk; ++kp) {
@@ -269,23 +308,7 @@ int jp1;int jpsubo1;__m256d c_v1;__m256d b_v1;__m256d apb_v1;__m256d cmp_lt1;__m
                                                 C_i = C + ipsubmn; 
                                                 jp = 0;
                                                 a_v = _mm256_set1_pd(A[ipsubmn + kpsubl]);
-                                        jpsubo0 = (sub_base_o + 0);
-jpsubo1 = (sub_base_o + 4);
-for(; jp <= jBj4; jp += 8) {B_k_j0 = B_k + jpsubo0; C_i_j0 = C_i + jpsubo0;
-b_v0 = _mm256_load_pd(B_k_j0);
-c_v0 = _mm256_load_pd(C_i_j0);
-apb_v0 = _mm256_add_pd(a_v, b_v0);
-res0 = _mm256_min_pd(c_v0, apb_v0);
-_mm256_store_pd(C_i_j0, res0);
-jpsubo0+=8;
-B_k_j1 = B_k + jpsubo1; C_i_j1 = C_i + jpsubo1;
-b_v1 = _mm256_load_pd(B_k_j1);
-c_v1 = _mm256_load_pd(C_i_j1);
-apb_v1 = _mm256_add_pd(a_v, b_v1);
-res1 = _mm256_min_pd(c_v1, apb_v1);
-_mm256_store_pd(C_i_j1, res1);
-jpsubo1+=8;
-}
+                                        ''' + generate_phase_4_innermost_loop(unroll) + '''
                                                 for(; jp < j + Bj; ++jp) {
                                                     C[ipsubmn + (jp + sub_base_o)] = min(
                                                     C[ipsubmn + (jp + sub_base_o)], 
@@ -408,11 +431,11 @@ jpsubo1+=8;
 
         double base = rdtsc_generalized(C_base, C_base, C_base, n, baseline);
 
-        printf(" Base : %f \n ", base);
+        printf(\" Base : %f \\n \", base);
 
         double time = rdtsc_tiled(C_opt, C_opt, C_opt, n, L1, Bi, Bj, Bk, compute);
 
-        printf(" Opt : %f \n ", time);
+        printf(\" Opt : %f \\n \", time);
 
         // Compare both 
         for(int i = 0; i < n*n; ++i) {
@@ -437,4 +460,5 @@ jpsubo1+=8;
 
         return 0;
     }
-    
+    '''
+    return program
