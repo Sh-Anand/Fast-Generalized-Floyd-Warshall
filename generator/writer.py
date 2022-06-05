@@ -431,11 +431,11 @@ def generate_program(unroll):
 
         double base = rdtsc_generalized(C_base, C_base, C_base, n, baseline);
 
-        printf(\" Base : %f \\n \", base);
+        printf(\" %f \\n \", base);
 
         double time = rdtsc_tiled(C_opt, C_opt, C_opt, n, L1, Bi, Bj, Bk, compute);
 
-        printf(\" Opt : %f \\n \", time);
+        printf(\" %f \\n \", time);
 
         // Compare both 
         for(int i = 0; i < n*n; ++i) {
