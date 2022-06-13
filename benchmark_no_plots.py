@@ -8,7 +8,7 @@ from typing import Tuple
 
 
 def run_benchmark(n: int, l1: int, b: int) -> Tuple:
-    repetitions_for_confidence = 5
+    repetitions_for_confidence = 1
     tmp_cycles = 0.0
     for i in range(repetitions_for_confidence):
 
