@@ -1016,21 +1016,30 @@ double benchmark_tiled_timed(int n, void (*baseline)(double*, double*, double*, 
 
 int main(int argc, char **argv) {
     if (argc != 4) {
-        printf("usage: FW <n> <L1> <B> \n"); 
+        printf("usage: FW <n> <fw> <L1> <B> \n");
         return -1;
     }
     int n = atoi(argv[1]);
-    int L1 = atoi(argv[2]);
+    int fw = atoi(argv[2]);
+    int L1 = atoi(argv[3]);
     int Bi,Bj,Bk;
-    Bi = Bj = Bk = atoi(argv[3]);
-    //printf("n=%d \n",n);
+    Bi = Bj = Bk = atoi(argv[4]);
 
+    double r = 0;
 #ifdef __x86_64__
-    //double r1 = benchmark_tiled_timed(n, fw_abc_min_plus, opt_tiled_fw_min_plus, L1, Bi, Bj, Bk);
-    //double r = benchmark_tiled_timed(n, fw_abc_min_plus, tiled_fw_min_plus, L1, Bi, Bj, Bk);
-    //double r = benchmark_tiled_timed(n, fw_abc_max_min, tiled_fw_max_min, L1, Bi, Bj, Bk);
-    double r = benchmark_tiled_timed_or_and(n, fw_abc_or_and, tiled_fw_or_and, L1, Bi, Bj, Bk);
-    //printf(" FW : RDTSC instruction:\n %lf cycles measured\n\n", r);
+    switch(fw) {
+        case 0:
+            r = benchmark_tiled_timed(n, fw_abc_min_plus, tiled_fw_min_plus, L1, Bi, Bj, Bk);
+            break;
+        case 1:
+            r = benchmark_tiled_timed_or_and(n, fw_abc_or_and, tiled_fw_or_and, L1, Bi, Bj, Bk);
+            break;
+        case 2:
+            r = benchmark_tiled_timed(n, fw_abc_max_min, tiled_fw_max_min, L1, Bi, Bj, Bk);
+            break;
+        default:
+            break;
+    }
     printf("%lf\n", r);
 #endif
 

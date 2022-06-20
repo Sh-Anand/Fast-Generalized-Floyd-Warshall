@@ -13,9 +13,7 @@
 // #endif
 #include <stdlib.h>
 #include <stdio.h>
-#include <time.h>
 #include <inttypes.h>
-#include <immintrin.h>
 #include <assert.h>
 #include <string.h>
 #include <math.h>
@@ -324,26 +322,10 @@ void test(int n, void (*baseline)(double*, int), void (*optimization)(double*, i
     double *C_opt = (double *)aligned_alloc(32, n*n*sizeof(double));
     init_matrices(C_base, C_opt, n);
 
-//    printf("\nBEFORE\n");
-//    for(int i = 0; i < n; i++) {
-//        for(int j = 0; j < n; j++) {
-//            printf("base[%d][%d] = %lf ", i, j, C_base[n*i + j]);
-//            printf("opt[%d][%d] = %lf\n", i, j, C_opt[n*i + j]);
-//        }
-//    }
-
     // Run baseline function on C
     baseline(C_base, n);
     // Run optimized function on C
     optimization(C_opt, n);
-
-//    printf("\nAFTER\n");
-//    for(int i = 0; i < n; i++) {
-//        for(int j = 0; j < n; j++) {
-//            printf("base[%d][%d] = %lf ", i, j, C_base[n*i + j]);
-//            printf("opt[%d][%d] = %lf\n", i, j, C_opt[n*i + j]);
-//        }
-//    }
 
     // Compare both
     for(int i = 0; i < n; ++i) {
@@ -359,26 +341,10 @@ void test_or_and(int n){
     u_int64_t *C_opt = (u_int64_t *)malloc(n*n*sizeof(double));
     init_bit_matrices(C_base, C_opt, n);
 
-//    printf("\nBEFORE\n");
-//    for(int i = 0; i < n; i++) {
-//        for(int j = 0; j < n; j++) {
-//            printf("base[%d][%d] = %lu ", i, j, C_base[n*i + j]);
-//            printf("opt[%d][%d] = %lu\n", i, j, C_opt[n*i + j]);
-//        }
-//    }
-
     // Run baseline function on C
     fw_or_and_int(C_base, n);
     // Run optimized function on C
     basic_optimization_to_plot_or_and(C_opt, n);
-
-//    printf("\nAFTER\n");
-//    for(int i = 0; i < n; i++) {
-//        for(int j = 0; j < n; j++) {
-//            printf("base[%d][%d] = %lu ", i, j, C_base[n*i + j]);
-//            printf("opt[%d][%d] = %lu\n", i, j, C_opt[n*i + j]);
-//        }
-//    }
 
     // Compare both
     for(int i = 0; i < n; ++i) {
