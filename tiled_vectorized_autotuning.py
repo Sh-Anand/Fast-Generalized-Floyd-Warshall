@@ -22,7 +22,7 @@ run("gcc -o ffw " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", 
 
 x = []
 y = []
-MAX_N = (2**20)
+MAX_N = (2**12)
 n = 8
 MIN_L1 = 4
 MAX_L1 = 400
