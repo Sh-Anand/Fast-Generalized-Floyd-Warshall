@@ -44,26 +44,30 @@ for fwi in range(3):
                 B = MIN_B
                 while B <= L1 and B <= MAX_B:
                     if L1 % B == 0:
-                        tmp_cycles = 0.0
-                        for i in range(repetitions_for_confidence):
+                        try:
+                            tmp_cycles = 0.0
+                            for i in range(repetitions_for_confidence):
 
-                            output = run("%s %d %d %d %d" % (executable_abs_path, n, fwi, L1, B), capture_output=True, shell=True).stdout.decode("utf-8")
+                                output = run("%s %d %d %d %d" % (executable_abs_path, n, fwi, L1, B), capture_output=True, shell=True).stdout.decode("utf-8")
 
-                            cycles = float(output.split()[0])
-                            tmp_cycles = tmp_cycles + cycles
+                                cycles = float(output.split()[0])
+                                tmp_cycles = tmp_cycles + cycles
 
-                        # Average result over repetitions
-                        tmp_cycles = tmp_cycles / repetitions_for_confidence
-                        res.append(((2*(n**3) / tmp_cycles), tmp_cycles, n, L1, B))
-                        res_for_n.append(((2*(n**3) / tmp_cycles), tmp_cycles, n, L1, B))
+                            # Average result over repetitions
+                            tmp_cycles = tmp_cycles / repetitions_for_confidence
+                            res.append(((2*(n**3) / tmp_cycles), tmp_cycles, n, L1, B))
+                            res_for_n.append(((2*(n**3) / tmp_cycles), tmp_cycles, n, L1, B))
 
-                        # Store results in case of crash
-                        with open("result_dump.csv", "a") as res_dump_file:
-                            csv_res = "%s, %d, %d, %d, %d, %lf\n" % (fw[fwi], n, L1, B, tmp_cycles, (2*(n**3) / tmp_cycles))
-                            res_dump_file.write(csv_res)
+                            # Store results in case of crash
+                            with open("result_dump.csv", "a") as res_dump_file:
+                                csv_res = "%s, %d, %d, %d, %d, %lf\n" % (fw[fwi], n, L1, B, tmp_cycles, (2*(n**3) / tmp_cycles))
+                                res_dump_file.write(csv_res)
 
-                        # Print benchmark
-                        print("Done benchmarking " + str(fw[fwi]) + " with N = %d, L1 = %d, and B = %d" % (n, L1, B))
+                            # Print benchmark
+                            print("Done benchmarking " + str(fw[fwi]) + " with N = %d, L1 = %d, and B = %d" % (n, L1, B))
+                        except:
+                            B = B + 1
+                            continue
 
                     # Update B
                     B = B + 1
