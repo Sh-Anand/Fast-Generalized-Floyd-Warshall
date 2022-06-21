@@ -1015,7 +1015,7 @@ double benchmark_tiled_timed(int n, void (*baseline)(double*, double*, double*, 
 }
 
 int main(int argc, char **argv) {
-    if (argc != 4) {
+    if (argc != 5) {
         printf("usage: FW <n> <fw> <L1> <B> \n");
         return -1;
     }
