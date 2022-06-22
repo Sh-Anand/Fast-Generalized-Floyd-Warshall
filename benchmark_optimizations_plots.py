@@ -37,29 +37,30 @@ def run_benchmark(fwi: int, n: int, l1: int, b: int):
 
 
 def set_up(file_name: string):
+    # Check for config file
+    if len(sys.argv) != 2:
+        print("Error: Configuration file needed")
+        return
+
     file_abs_path = os.path.join(THIS_FOLDER, file_name)
     print(os.getcwd())
     run("gcc -o ffw " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", shell=True)
+    fwi = -1
 
-    for fwi in range(semi_rings):
-        print("Benchmarking " + str(fw[fwi]) + " from " + file_name)
-        with open(csv_file, "a") as res_dump_file:
-            res_dump_file.write(str(fw[fwi]) + " from " + file_name + "\n")
-
-        # Check for config file
-        if len(sys.argv) == 2:
-            config_file: str = sys.argv[1]
-            with open(config_file, "r") as config:
-                lines = config.readlines()
-                for line in lines:
-                    (n, l1, b, _) = line.split(",")
-                    print("Begin benchmarking " + str(fw[fwi]) + " from " + file_name +
-                          " with N = %s, L1 = %s, and B = %s" % (n, l1, b))
-                    run_benchmark(fwi, int(n), int(l1), int(b))
-
-        else:
-            print("Error: Configuration file needed")
-            return
+    config_file: str = sys.argv[1]
+    with open(config_file, "r") as config:
+        lines = config.readlines()
+        for line in lines:
+            # Handle each semi-ring
+            if len(line.split(",")) < 2:
+                fwi = fwi + 1
+                with open(csv_file, "a") as res_dump_file:
+                    res_dump_file.write(str(fw[fwi]) + " from " + file_name + "\n")
+                continue
+            (n, l1, b, _) = line.split(",")
+            print("Begin benchmarking " + str(fw[fwi]) + " from " + file_name +
+                  " with N = %s, L1 = %s, and B = %s" % (n, l1, b))
+            run_benchmark(fwi, int(n), int(l1), int(b))
 
 
 def benchmark_baseline_intermediate(file_name: string):
