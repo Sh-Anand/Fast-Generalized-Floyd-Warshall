@@ -76,11 +76,11 @@ def generate_phase_2_innermost_loop(unroll):
 
     for i in range(unroll):
         id = str(i)
-        phase_2_body = phase_2_body + indent9 + "apb_v"+id+" = _mm256_add_pd(a_v, b_v"+id+");\n"
+        phase_2_body = phase_2_body + indent9 + "c_v"+id+" = _mm256_load_pd(C + iplnjpm"+id+");\n"
 
     for i in range(unroll):
         id = str(i)
-        phase_2_body = phase_2_body + indent9 + "c_v"+id+" = _mm256_load_pd(C + iplnjpm"+id+");\n"
+        phase_2_body = phase_2_body + indent9 + "apb_v"+id+" = _mm256_add_pd(a_v, b_v"+id+");\n"
 
     for i in range(unroll):
         id = str(i)
@@ -123,11 +123,11 @@ def generate_phase_3_innermost_loop(unroll):
 
     for i in range(unroll):
         id = str(i)
-        phase_3_body = phase_3_body + indent9 + "apb_v"+id+" = _mm256_add_pd(a_v, b_v"+id+");\n"
+        phase_3_body = phase_3_body + indent9 + "c_v"+id+" = _mm256_load_pd(C + ipmnjpl"+id+");\n"
 
     for i in range(unroll):
         id = str(i)
-        phase_3_body = phase_3_body + indent9 + "c_v"+id+" = _mm256_load_pd(C + ipmnjpl"+id+");\n"
+        phase_3_body = phase_3_body + indent9 + "apb_v"+id+" = _mm256_add_pd(a_v, b_v"+id+");\n"
 
     for i in range(unroll):
         id = str(i)

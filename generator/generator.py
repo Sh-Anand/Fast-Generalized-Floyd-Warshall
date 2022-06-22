@@ -4,8 +4,10 @@ from csv import DictReader
 from writer import generate_program
 import matplotlib.pyplot as plt
 
+generated_file = "generated_vectorized_tiled.c"
+
 if len(sys.argv) == 2:
-    f = open("generated_vectorized_tiled.c", "w")
+    f = open(generated_file, "w")
     program = generate_program(int(sys.argv[1]))
     f.write(program)
     f.close()
@@ -17,7 +19,7 @@ elif len(sys.argv) == 1:
     y = []
     for unroll in (2 ** p for p in range(0, 5)):
         x.append(unroll)
-        f = open("generated_vectorized_tiled.c", "w")
+        f = open(generated_file, "w")
         program = generate_program(unroll)
         f.write(program)
         f.close()
@@ -35,7 +37,7 @@ elif len(sys.argv) == 1:
                 speedup = speedup + vals[0]/vals[1]
             mean_speedup = mean_speedup + (speedup/maxreps)
             num = num + 1
-        
+
         mean_speedup = mean_speedup/num
         y.append(mean_speedup)
         if mean_speedup > max_speedup:
