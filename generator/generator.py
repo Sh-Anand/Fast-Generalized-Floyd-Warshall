@@ -6,12 +6,13 @@ import matplotlib.pyplot as plt
 
 generated_file = "generated_vectorized_tiled.c"
 
-if len(sys.argv) == 2:
+op = int(sys.argv[1])
+if len(sys.argv) == 3:
     f = open(generated_file, "w")
-    program = generate_program(int(sys.argv[1]))
+    program = generate_program(int(sys.argv[2]), op)
     f.write(program)
     f.close()
-elif len(sys.argv) == 1:
+elif len(sys.argv) == 2:
     max_speedup = 0
     best_unrolling = 0
     maxreps = 3
@@ -20,7 +21,7 @@ elif len(sys.argv) == 1:
     for unroll in (2 ** p for p in range(0, 5)):
         x.append(unroll)
         f = open(generated_file, "w")
-        program = generate_program(unroll)
+        program = generate_program(unroll, op)
         f.write(program)
         f.close()
         run("gcc -O3 -ffast-math -march=native generated_vectorized_tiled.c", shell=True)

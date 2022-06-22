@@ -23,7 +23,9 @@ def generate_vars(vars, unroll, indent):
         phase_1_u_vars = phase_1_u_vars + "\n"
     return phase_1_u_vars
 
-def generate_phase_1_innermost_loop(unroll):
+ops = [["_mm256_add_pd", "_mm256_min_pd"], ["_mm256_min_pd", "_mm256_max_pd"]]
+
+def generate_phase_1_innermost_loop(unroll, op):
     phase_1_body = ""
 
     for i in range(unroll):
@@ -45,11 +47,11 @@ def generate_phase_1_innermost_loop(unroll):
 
     for i in range(unroll):
         id = str(i)
-        phase_1_body = phase_1_body + indent7 + "apb_v"+id+" = _mm256_add_pd(a_v, b_v"+id+");\n"
+        phase_1_body = phase_1_body + indent7 + "apb_v"+id+" = "+ops[op][0]+"(a_v, b_v"+id+");\n"
 
     for i in range(unroll):
         id = str(i)
-        phase_1_body = phase_1_body + indent7 + "res"+id+" = _mm256_min_pd(c_v"+id+", apb_v"+id+");\n"
+        phase_1_body = phase_1_body + indent7 + "res"+id+" = "+ops[op][1]+"(c_v"+id+", apb_v"+id+");\n"
 
     for i in range(unroll):
         id = str(i)
@@ -62,7 +64,7 @@ def generate_phase_1_innermost_loop(unroll):
     phase_1_body = phase_1_body + indent6 + "}\n"
     return phase_1_body
 
-def generate_phase_2_innermost_loop(unroll):
+def generate_phase_2_innermost_loop(unroll, op):
     phase_2_body = ""
     for i in range(unroll):
         id = str(i)
@@ -80,11 +82,11 @@ def generate_phase_2_innermost_loop(unroll):
 
     for i in range(unroll):
         id = str(i)
-        phase_2_body = phase_2_body + indent9 + "apb_v"+id+" = _mm256_add_pd(a_v, b_v"+id+");\n"
+        phase_2_body = phase_2_body + indent9 + "apb_v"+id+" = "+ops[op][0]+"(a_v, b_v"+id+");\n"
 
     for i in range(unroll):
         id = str(i)
-        phase_2_body = phase_2_body + indent9 + "res"+id+" = _mm256_min_pd(c_v"+id+", apb_v"+id+");\n"
+        phase_2_body = phase_2_body + indent9 + "res"+id+" = "+ops[op][1]+"(c_v"+id+", apb_v"+id+");\n"
 
     for i in range(unroll):
         id = str(i)
@@ -101,7 +103,7 @@ def generate_phase_2_innermost_loop(unroll):
     phase_2_body = phase_2_body + indent8 + "}\n"
     return phase_2_body
 
-def generate_phase_3_innermost_loop(unroll):
+def generate_phase_3_innermost_loop(unroll, op):
     phase_3_body = ""
 
     for i in range(unroll):
@@ -127,11 +129,11 @@ def generate_phase_3_innermost_loop(unroll):
 
     for i in range(unroll):
         id = str(i)
-        phase_3_body = phase_3_body + indent9 + "apb_v"+id+" = _mm256_add_pd(a_v, b_v"+id+");\n"
+        phase_3_body = phase_3_body + indent9 + "apb_v"+id+" = "+ops[op][0]+"(a_v, b_v"+id+");\n"
 
     for i in range(unroll):
         id = str(i)
-        phase_3_body = phase_3_body + indent9 + "res"+id+" = _mm256_min_pd(c_v"+id+", apb_v"+id+");\n"
+        phase_3_body = phase_3_body + indent9 + "res"+id+" = "+ops[op][1]+"(c_v"+id+", apb_v"+id+");\n"
 
     for i in range(unroll):
         id = str(i)
@@ -144,7 +146,7 @@ def generate_phase_3_innermost_loop(unroll):
     phase_3_body = phase_3_body + indent8 + "}\n"
     return phase_3_body
 
-def generate_phase_4_innermost_loop(unroll):
+def generate_phase_4_innermost_loop(unroll, op):
     phase_4_body = ""
 
     for i in range(unroll):
@@ -166,11 +168,11 @@ def generate_phase_4_innermost_loop(unroll):
 
     for i in range(unroll):
         id = str(i)
-        phase_4_body = phase_4_body + indent12 + "apb_v"+id+" = _mm256_add_pd(a_v, b_v"+id+");\n"
+        phase_4_body = phase_4_body + indent12 + "apb_v"+id+" = "+ops[op][0]+"(a_v, b_v"+id+");\n"
 
     for i in range(unroll):
         id = str(i)
-        phase_4_body = phase_4_body + indent12 + "res"+id+" = _mm256_min_pd(c_v"+id+", apb_v"+id+");\n"
+        phase_4_body = phase_4_body + indent12 + "res"+id+" = "+ops[op][1]+"(c_v"+id+", apb_v"+id+");\n"
 
     for i in range(unroll):
         id = str(i)
@@ -184,7 +186,7 @@ def generate_phase_4_innermost_loop(unroll):
     return phase_4_body
 
 
-def generate_program(unroll):
+def generate_program(unroll, op):
     program = '''
 #ifdef linux
 #define min(X, Y)  ((X) < (Y) ? (X) : (Y))
@@ -258,7 +260,7 @@ void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int B
                         a = A[iplnpkpbm];
                         a_v = _mm256_set1_pd(a);
                         jp = j;\n''' + \
-                        generate_phase_1_innermost_loop(unroll) + \
+                        generate_phase_1_innermost_loop(unroll, op) + \
                         '''    
                         for(; jp < j + Bj; ++jp) {
                             jpm0 = (jp + sub_base_m);
@@ -304,7 +306,7 @@ void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int B
                                 a = A[iplnkl];
                                 a_v = _mm256_set1_pd(a);
                                 jp = j;\n''' + \
-                                generate_phase_2_innermost_loop(unroll) + \
+                                generate_phase_2_innermost_loop(unroll, op) + \
                                 '''
                                 for(; jp < j + Bj; ++jp) {
                                     jpm0 = (jp + sub_base_m);
@@ -350,7 +352,7 @@ void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int B
                                 a = A[ipmnkl];
                                 a_v = _mm256_set1_pd(a);
                                 jp = j;\n''' + \
-                                generate_phase_3_innermost_loop(unroll) + \
+                                generate_phase_3_innermost_loop(unroll, op) + \
                                 '''
                                 for(; jp < j + Bj; ++jp) {
                                     jpl0 = (jp + sub_base_l);
@@ -401,7 +403,7 @@ void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int B
                                             C_i = C + ipsubmn; 
                                             jp = 0;
                                             a_v = _mm256_set1_pd(A[ipsubmn + kpsubl]);\n''' + \
-                                            generate_phase_4_innermost_loop(unroll) + \
+                                            generate_phase_4_innermost_loop(unroll, op) + \
                                             '''
                                             for(; jp < j + Bj; ++jp) {
                                                 C[ipsubmn + (jp + sub_base_o)] = min(
@@ -549,7 +551,7 @@ int main(int argc, char **argv) {
     Bi = Bj = Bk = atoi(argv[3]);
 
 #ifdef __x86_64__
-    double r1 = benchmark_tiled_timed(n, fw_abc_min_plus, opt_tiled_fw_min_plus, L1, Bi, Bj, Bk);
+    double r1 = benchmark_tiled_timed(n, '''+("fw_abc_min_plus" if op==0 else "fw_abc_max_min")+''', opt_tiled_fw_min_plus, L1, Bi, Bj, Bk);
 #endif
 
     return 0;
