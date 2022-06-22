@@ -1,7 +1,8 @@
 import sys
 from subprocess import run, PIPE
 from csv import DictReader
-from writer import generate_program
+import writer
+import writer_or_and
 import matplotlib.pyplot as plt
 
 generated_file = "generated_vectorized_tiled.c"
@@ -9,7 +10,11 @@ generated_file = "generated_vectorized_tiled.c"
 op = int(sys.argv[1])
 if len(sys.argv) == 3:
     f = open(generated_file, "w")
-    program = generate_program(int(sys.argv[2]), op)
+    program = ""
+    if op == 2:
+        program = writer_or_and.generate_program(int(sys.argv[2]), 0)
+    else:
+        program = writer.generate_program(int(sys.argv[2]), op)
     f.write(program)
     f.close()
 elif len(sys.argv) == 2:

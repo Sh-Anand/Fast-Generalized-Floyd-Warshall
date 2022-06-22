@@ -232,7 +232,7 @@ void fw_abc_max_min(double* A, double* B, double* C, int n) {
     }
 }
 
-void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int Bi, int Bj, int Bk) {
+void opt_tiled(double* A, double* B, double* C, int L1, int n, int Bi, int Bj, int Bk) {
     int mm = n / L1;
     for(int k = 0; k < mm; ++k) {
         int l1 = k;
@@ -551,7 +551,7 @@ int main(int argc, char **argv) {
     Bi = Bj = Bk = atoi(argv[3]);
 
 #ifdef __x86_64__
-    double r1 = benchmark_tiled_timed(n, '''+("fw_abc_min_plus" if op==0 else "fw_abc_max_min") +''', opt_tiled_fw_min_plus, L1, Bi, Bj, Bk);
+    double r1 = benchmark_tiled_timed(n, '''+("fw_abc_min_plus" if op==0 else "fw_abc_max_min") +''', opt_tiled, L1, Bi, Bj, Bk);
 #endif
 
     return 0;
