@@ -2,11 +2,10 @@ import os
 import string
 import sys
 from subprocess import run
-from typing import Tuple
 
-MAX_N = (2 ** 20)
+MAX_N = (2 ** 12)
 semi_rings = 3
-repetitions_for_confidence = 1
+repetitions_for_confidence = 10
 
 csv_file = "benchmark_results.csv"
 fw_base = ["min_plus", "max_min", "or_and"]
@@ -16,7 +15,7 @@ THIS_FOLDER = os.path.dirname(os.path.abspath(__file__))
 executable_abs_path = os.path.join(THIS_FOLDER, "ffw")
 
 
-def run_benchmark(fwi: int, n: int, l1: int, b: int) -> Tuple:
+def run_benchmark(fwi: int, n: int, l1: int, b: int):
     tmp_cycles = 0.0
     for i in range(repetitions_for_confidence):
         output = run("%s %d %d %d %d" % (executable_abs_path, n, fwi, l1, b), capture_output=True,
@@ -27,7 +26,6 @@ def run_benchmark(fwi: int, n: int, l1: int, b: int) -> Tuple:
 
     # Average result over repetitions
     tmp_cycles = tmp_cycles / repetitions_for_confidence
-    res = ((2 * (n ** 3) / tmp_cycles), tmp_cycles, n)
 
     # Store results in case of crash
     with open(csv_file, "a") as res_dump_file:
@@ -35,8 +33,7 @@ def run_benchmark(fwi: int, n: int, l1: int, b: int) -> Tuple:
         res_dump_file.write(csv_res)
 
     # Print benchmark
-    print("Done benchmarking " + str(fw[fwi]) + " with N = %d" % (n))
-    return res
+    print("Done benchmarking " + str(fw[fwi]) + " with N = %d" % n)
 
 
 def set_up(file_name: string):
@@ -49,9 +46,6 @@ def set_up(file_name: string):
         with open(csv_file, "a") as res_dump_file:
             res_dump_file.write(str(fw[fwi]) + " from " + file_name + "\n")
 
-        n = 4096
-        res = []
-
         # Check for config file
         if len(sys.argv) == 2:
             config_file: str = sys.argv[1]
@@ -59,17 +53,14 @@ def set_up(file_name: string):
                 lines = config.readlines()
                 for line in lines:
                     (n, l1, b, _) = line.split(",")
-                    print("Begin benchmarking " + str(fw[fwi]) + " from " + file_name + " with N = %s, L1 = %s, and B = "
-                                                                                       "%s" % (n, l1, b))
-                    res.append(run_benchmark(fwi, int(n), int(l1), int(b)))
+                    print("Begin benchmarking " + str(fw[fwi]) + " from " + file_name +
+                          " with N = %s, L1 = %s, and B = %s" % (n, l1, b))
+                    run_benchmark(fwi, int(n), int(l1), int(b))
 
         else:
-            while n <= MAX_N:
-                l1 = n / 8 if (n / 8 > 0) else 1
-                b = l1 / 8 if (l1 / 8 > 0) else 1
-                res.append(run_benchmark(fwi, n, l1, b))
-                # Update N
-                n = n * 2
+            print("Error: Configuration file needed")
+            return
+
 
 def benchmark_baseline_intermediate(file_name: string):
     file_abs_path = os.path.join(THIS_FOLDER, file_name)
@@ -83,7 +74,7 @@ def benchmark_baseline_intermediate(file_name: string):
             with open(csv_file, "a") as res_dump_file:
                 res_dump_file.write(str(fw_base[fwi]) + " " + str(implementations[impl]) + "\n")
 
-            n = 4
+            n = 8
 
             while n <= MAX_N:
                 tmp_cycles = 0.0
@@ -101,10 +92,10 @@ def benchmark_baseline_intermediate(file_name: string):
                     res_dump_file.write(csv_res)
 
                 # Print benchmark
-                print("Done benchmarking " + str(fw_base[fwi]) + " with N = %d" % (n))
+                print("Done benchmarking " + str(fw_base[fwi]) + " with N = %d" % n)
 
                 # Update N
-                n = n * 2
+                n = n * 3
 
 
 # Benchmark baseline and basic optimization
