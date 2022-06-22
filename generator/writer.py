@@ -266,8 +266,8 @@ void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int B
                             jpm0 = (jp + sub_base_m);
                             iplnpjpm0 = ipln + jpm0;
                             c = C[iplnpjpm0];
-                            apb = a + B[kpbln + jpm0];
-                            min_c = min(c, apb);
+                            apb = '''+("a + B[kpbln + jpm0]" if op == 0 else "min(a, B[kpbln + jpm0])") +''';
+                            min_c = '''+("min(c, apb)" if op == 0 else "max(c, apb)")+''';
                             C[iplnpjpm0] = min_c;
                         }
                     }
@@ -311,9 +311,9 @@ void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int B
                                 for(; jp < j + Bj; ++jp) {
                                     jpm0 = (jp + sub_base_m);
                                     iplnjpm0 = ipln + jpm0; 
-                                    apb = a + B[kln + jpm0];
+                                    apb = '''+("a + B[kln + jpm0]" if op == 0 else "min(a, B[kln + jpm0])") +''';
                                     c = C[iplnjpm0];
-                                    min_c = min(c, apb);
+                                    min_c = '''+("min(c, apb)" if op == 0 else "max(c, apb)")+''';
                                     C[iplnjpm0] = min_c;
                                 }
                             }
@@ -358,9 +358,9 @@ void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int B
                                     jpl0 = (jp + sub_base_l);
                                     ipmnjpl0 = ipmn + jpl0;
                                     klnjpl0 = kln + jpl0;
-                                    apb = a + B[klnjpl0];
+                                    apb = '''+("a + B[klnjpl0]" if op == 0 else "min(a, B[klnjpl0])") +''';
                                     c = C[ipmnjpl0];
-                                    min_c = min(c, apb);
+                                    min_c = '''+("min(c, apb)" if op == 0 else "max(c, apb)")+''';
                                     C[ipmnjpl0] = min_c;
                                 }
                             }
@@ -406,10 +406,10 @@ void opt_tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int B
                                             generate_phase_4_innermost_loop(unroll, op) + \
                                             '''
                                             for(; jp < j + Bj; ++jp) {
-                                                C[ipsubmn + (jp + sub_base_o)] = min(
+                                                C[ipsubmn + (jp + sub_base_o)] = '''+("min" if op == 0 else "max")+'''(
                                                     C[ipsubmn + (jp + sub_base_o)], 
-                                                    A[ipsubmn + (kp + sub_base_l)] + 
-                                                    B[((kp + sub_base_l) * n) + (jp + sub_base_o)]
+                                                    '''+("A[ipsubmn + (kp + sub_base_l)] + B[((kp + sub_base_l) * n) + (jp + sub_base_o)]" if op == 0 else
+                                                        "min(A[ipsubmn + (kp + sub_base_l)], B[((kp + sub_base_l) * n) + (jp + sub_base_o)])") + '''
                                                 );
                                             }
                                         }
@@ -551,7 +551,7 @@ int main(int argc, char **argv) {
     Bi = Bj = Bk = atoi(argv[3]);
 
 #ifdef __x86_64__
-    double r1 = benchmark_tiled_timed(n, '''+("fw_abc_min_plus" if op==0 else "fw_abc_max_min")+''', opt_tiled_fw_min_plus, L1, Bi, Bj, Bk);
+    double r1 = benchmark_tiled_timed(n, '''+("fw_abc_min_plus" if op==0 else "fw_abc_max_min") +''', opt_tiled_fw_min_plus, L1, Bi, Bj, Bk);
 #endif
 
     return 0;
