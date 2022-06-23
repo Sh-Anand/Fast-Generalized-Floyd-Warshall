@@ -8,9 +8,8 @@ semi_rings = 3
 repetitions_for_confidence = 10
 
 csv_file = "benchmark_results.csv"
-fw_base = ["min_plus", "max_min", "or_and"]
+fw = ["min_plus", "max_min", "or_and"]  # functions in generalized floyd warshall
 implementations = ["baseline", "basic_opt"]
-fw = ["min_plus", "or_and", "max_min"]  # functions in generalized floyd warshall
 THIS_FOLDER = os.path.dirname(os.path.abspath(__file__))
 executable_abs_path = os.path.join(THIS_FOLDER, "ffw")
 
@@ -21,7 +20,7 @@ def run_benchmark(fwi: int, n: int, l1: int, b: int):
         output = run("%s %d %d %d %d" % (executable_abs_path, n, fwi, l1, b), capture_output=True,
                      shell=True).stdout.decode("utf-8")
 
-        cycles = float(output.split("\n")[0]) # [float(t) for t in output.split() if re.match(r'^-?\d+(?:\.\d+)$', t) is not None][0]
+        cycles = float(output.split("\n")[0])
         tmp_cycles = tmp_cycles + cycles
 
     # Average result over repetitions
@@ -69,9 +68,9 @@ def benchmark_baseline_intermediate(file_name: string):
     for impl in range(2):
         for fwi in range(semi_rings):
 
-            print("Benchmarking " + str(fw_base[fwi]))
+            print("Benchmarking " + str(fw[fwi]))
             with open(csv_file, "a") as res_dump_file:
-                res_dump_file.write(str(fw_base[fwi]) + " " + str(implementations[impl]) + "\n")
+                res_dump_file.write(str(fw[fwi]) + " " + str(implementations[impl]) + "\n")
 
             n = 8
 
@@ -91,7 +90,7 @@ def benchmark_baseline_intermediate(file_name: string):
                     res_dump_file.write(csv_res)
 
                 # Print benchmark
-                print("Done benchmarking " + str(fw_base[fwi]) + " with N = %d" % n)
+                print("Done benchmarking " + str(fw[fwi]) + " with N = %d" % n)
 
                 # Update N
                 n = n * 3

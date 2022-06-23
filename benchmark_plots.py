@@ -56,7 +56,7 @@ scalar_peak_performance = 2.48
 # Plot the results
 for fwi in range(3):
     plt.plot(x, y[fwi][0], label="baseline", marker='o')
-    plt.plot(x, y[fwi][1], label="basic optimizations", marker='o')
+    # plt.plot(x, y[fwi][1], label="basic optimizations", marker='o')
     plt.plot(x, y[fwi][2], label="tiled", marker='o')
     plt.plot(x, y[fwi][3], label="tiled vectorized", marker='o')
 
@@ -67,9 +67,9 @@ for fwi in range(3):
     for i in range(0, 11):
         plt.axhspan(i, i+.5, facecolor='0.1', alpha=0.1)
 
-    plt.suptitle(fw[fwi] + " performances", fontweight="bold", fontsize=12, x=0.285)
+    plt.suptitle(fw[fwi] + " performances", fontweight="bold", fontsize=12, x=0.31)
     plt.title("flags: -march=native -O3 -ffast-math", loc='left')
-    plt.legend(bbox_to_anchor=(1.38, 1.02))
+    plt.legend()
     plt.xscale('log', base=3)
     plt.ylim([0.0, 5.5])
     plt.xlabel("N")

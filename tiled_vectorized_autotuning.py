@@ -13,10 +13,7 @@ THIS_FOLDER = os.path.dirname(os.path.abspath(__file__))
 file_abs_path = os.path.join(THIS_FOLDER, file_name)
 executable_abs_path = os.path.join(THIS_FOLDER, "ffw")
 
-print(os.getcwd())
-fw = ["min_plus", "or_and", "max_min"]  # functions in generalized floyd warshall
-
-print("Benchmarking " + str(fw[0]))
+fw = ["min_plus", "max_min", "or_and"]  # functions in generalized floyd warshall
 
 run("gcc -o ffw " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", shell=True)
 
@@ -28,6 +25,7 @@ MIN_B = 2
 MAX_B = 400
 
 for fwi in range(3):
+    print("Benchmarking " + str(fw[fwi]))
     tmp_cycles = 0.0
     res = []
     n = MIN_N
@@ -88,7 +86,7 @@ for fwi in range(3):
     # Compile all of the best configs and write them to a file
     bestRes = []             # Store best results for each n
     cur_n = 4                # Keep track of current n
-    best_flops = -1.0          # Keep track of current best perf
+    best_flops = -1.0        # Keep track of current best perf
     cur_best_config = (0, 0) # L1 & B
 
     for (flops, cycles, _n, _L1, _B) in res:

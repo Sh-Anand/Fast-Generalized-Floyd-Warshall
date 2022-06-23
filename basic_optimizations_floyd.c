@@ -287,9 +287,9 @@ static void (*fw_intermediate[2]) (double*, int) = {basic_optimization_to_plot_m
                                                     basic_optimization_to_plot_max_min};
 
 
-double benchmark(int baseline, int fw_idx, int n) {
+double benchmark(int impl, int fw_idx, int n) {
     double time = 0;
-    if(baseline == 0) {
+    if(impl == 0) {
         if(fw_idx == 2) {
             uint64_t *C = (uint64_t *)malloc(n*n*sizeof(uint64_t));
             init_bit_matrix(C, n);
@@ -301,7 +301,7 @@ double benchmark(int baseline, int fw_idx, int n) {
             time = rdtsc(C, n, fw[fw_idx]);
             free(C);
         }
-    } else if(baseline == 1) {
+    } else if(impl == 1) {
         if(fw_idx == 2) {
             uint64_t *C = (uint64_t *)malloc(n*n*sizeof(uint64_t));
             init_bit_matrix(C, n);
@@ -364,14 +364,14 @@ int main(int argc, char **argv) {
 
     int n = atoi(argv[1]);
     int fw_idx = atoi(argv[2]);
-    int baseline = atoi(argv[3]);
+    int impl = atoi(argv[3]);
     if (fw_idx < 0 || fw_idx > 2) {
         printf("usage: FW <n> <fw> (fw = 0,1,2 = (min,plus), (max, min), (or,and))\n");
         return -1;
     }
 
 #ifdef __x86_64__
-    double r  = benchmark(baseline, fw_idx, n);
+    double r  = benchmark(impl, fw_idx, n);
     printf(" %lf", r);
 #endif
 

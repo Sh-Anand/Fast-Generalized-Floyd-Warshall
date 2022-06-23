@@ -844,7 +844,7 @@ double benchmark_tiled_or(int n, void (*baseline)(uint64_t*, uint64_t*, uint64_t
 }
 
 int main(int argc, char **argv) {
-    if (argc!=5) {printf("usage: FW <n> <fw> <L1> <B> (fw = 0,1,2 = (min,plus), (or,and), (max, min))\n"); return -1;}
+    if (argc!=5) {printf("usage: FW <n> <fw> <L1> <B> (fw = 0,1,2 = (min,plus), (max, min), (or,and))\n"); return -1;}
     int n = atoi(argv[1]);
     int fw = atoi(argv[2]);
     int L1 = atoi(argv[3]);
@@ -860,10 +860,10 @@ int main(int argc, char **argv) {
         r = benchmark_tiled(n, fw_abc_min_plus, tiled_fw_min_plus, L1, Bi, Bj, Bk);
         break;
     case 1:
-        r = benchmark_tiled_or(n, fw_abc_or_and, tiled_fw_or_and, L1, Bi, Bj, Bk);
+        r = benchmark_tiled(n, fw_abc_max_min, tiled_fw_max_min, L1, Bi, Bj, Bk);
         break;
     case 2:
-        r = benchmark_tiled(n, fw_abc_max_min, tiled_fw_max_min, L1, Bi, Bj, Bk);
+        r = benchmark_tiled_or(n, fw_abc_or_and, tiled_fw_or_and, L1, Bi, Bj, Bk);
         break;
     default:
         break;
