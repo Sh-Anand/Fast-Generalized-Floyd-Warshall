@@ -1,4 +1,193 @@
+﻿indent2 = "        "
+indent4 = "                "
+indent6 = "                        "
+indent7 = "                            "
+indent8 = "                                "
+indent9 = "                                    "
+indent11 = "                                            "
+indent12 = "                                                "
 
+counter = 4
+phase_1_vars = ["int jpm", "int iplnpjpm", "__m256i c_v", "__m256i b_v", "__m256i apb_v", "__m256i cmp_lt", "__m256i res"]
+phase_2_vars = ["int jpm", "int iplnjpm", "__m256i c_v", "__m256i b_v", "__m256i apb_v", "__m256i cmp_lt", "__m256i res", "uint64_t *Bkj"]
+phase_3_vars = ["int jpl", "int ipmnjpl", "int klnjpl", "__m256i c_v", "__m256i b_v", "__m256i apb_v", "__m256i cmp_lt", "__m256i res"]
+phase_4_vars = ["int jp", "int jpsubo", "__m256i c_v", "__m256i b_v", "__m256i apb_v", "__m256i cmp_lt", "__m256i res", "uint64_t *B_k_j", "uint64_t *C_i_j"]
+
+def generate_vars(vars, unroll, indent):
+    phase_1_u_vars = ""
+    for i in range(unroll):
+        id = str(i)
+        phase_1_u_vars = phase_1_u_vars + indent
+        for var in vars:
+            phase_1_u_vars = phase_1_u_vars + var + id + "; "
+        phase_1_u_vars = phase_1_u_vars + "\n"
+    return phase_1_u_vars
+
+ops = [["_mm256_and_si256", "_mm256_or_si256"]]
+
+def generate_phase_1_innermost_loop(unroll, op):
+    phase_1_body = ""
+
+    for i in range(unroll):
+        phase_1_body = phase_1_body + indent6 + "jpm"+str(i)+" = (jp + sub_base_m + "+str(i*counter)+");\n"
+
+    phase_1_body = phase_1_body + "\n" + indent6 + "for(; jp <= j + Bj - 4; jp += "+str(unroll*counter)+") {\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_1_body = phase_1_body + indent7 + "iplnpjpm"+id+" = ipln + jpm"+id+";\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_1_body = phase_1_body + indent7 + "c_v"+id+" = _mm256_load_si256(C + iplnpjpm"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_1_body = phase_1_body + indent7 + "b_v"+id+" = _mm256_load_si256(B + kpbln + jpm"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_1_body = phase_1_body + indent7 + "apb_v"+id+" = "+ops[op][0]+"(a_v, b_v"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_1_body = phase_1_body + indent7 + "res"+id+" = "+ops[op][1]+"(c_v"+id+", apb_v"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_1_body = phase_1_body + indent7 + "_mm256_store_si256(C + iplnpjpm"+id+", res"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_1_body = phase_1_body + indent7 + "jpm"+id+" += "+str(unroll * counter)+";\n"
+
+    phase_1_body = phase_1_body + indent6 + "}\n"
+    return phase_1_body
+
+def generate_phase_2_innermost_loop(unroll, op):
+    phase_2_body = ""
+    for i in range(unroll):
+        id = str(i)
+        phase_2_body = phase_2_body + indent8 + "jpm"+id+" = (jp + sub_base_m + "+str(i*counter)+"); iplnjpm" +id+"= ipln + jpm"+id+"; Bkj"+id+"=B + kln + jpm"+id+";\n"
+
+    phase_2_body = phase_2_body + "\n" + indent8 + "for(; jp <= j + Bj - "+str(unroll*counter)+"; jp += "+str(unroll*counter)+") {\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_2_body = phase_2_body + indent9 + "b_v"+id+" = _mm256_load_si256(Bkj"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_2_body = phase_2_body + indent9 + "c_v"+id+" = _mm256_load_si256(C + iplnjpm"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_2_body = phase_2_body + indent9 + "apb_v"+id+" = "+ops[op][0]+"(a_v, b_v"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_2_body = phase_2_body + indent9 + "res"+id+" = "+ops[op][1]+"(c_v"+id+", apb_v"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_2_body = phase_2_body + indent9 + "_mm256_store_si256(C + iplnjpm"+id+", res"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_2_body = phase_2_body + indent9 + "iplnjpm"+id+" += "+str(unroll*counter)+";\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_2_body = phase_2_body + indent9 + "Bkj"+id+" += "+str(unroll*counter)+";\n"
+
+    phase_2_body = phase_2_body + indent8 + "}\n"
+    return phase_2_body
+
+def generate_phase_3_innermost_loop(unroll, op):
+    phase_3_body = ""
+
+    for i in range(unroll):
+        phase_3_body = phase_3_body + indent8 + "jpl"+str(i)+" = (jp + sub_base_l + "+str(i*counter)+");\n"
+
+    phase_3_body = phase_3_body + "\n" + indent8 + "for(; jp <= j + Bj - "+str(unroll*counter)+"; jp += "+str(unroll*counter)+") {\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_3_body = phase_3_body + indent9 + "ipmnjpl"+id+" = ipmn + jpl"+id+";\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_3_body = phase_3_body + indent9 + "klnjpl"+id+" = kln + jpl"+id+";\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_3_body = phase_3_body + indent9 + "b_v"+id+" = _mm256_load_si256(B + klnjpl"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_3_body = phase_3_body + indent9 + "c_v"+id+" = _mm256_load_si256(C + ipmnjpl"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_3_body = phase_3_body + indent9 + "apb_v"+id+" = "+ops[op][0]+"(a_v, b_v"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_3_body = phase_3_body + indent9 + "res"+id+" = "+ops[op][1]+"(c_v"+id+", apb_v"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_3_body = phase_3_body + indent9 + "_mm256_store_si256(C + ipmnjpl"+id+", res"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_3_body = phase_3_body + indent9 + "jpl"+id+" += "+str(unroll*counter)+";\n"
+
+    phase_3_body = phase_3_body + indent8 + "}\n"
+    return phase_3_body
+
+def generate_phase_4_innermost_loop(unroll, op):
+    phase_4_body = ""
+
+    for i in range(unroll):
+        phase_4_body = phase_4_body + indent11 + "jpsubo"+str(i)+" = (sub_base_o + "+str(i*counter)+");\n"
+
+    phase_4_body = phase_4_body + "\n" + indent11 + "for(; jp <= jBj4; jp += "+str(unroll*counter)+") {\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_4_body = phase_4_body + indent12 + "B_k_j"+id+" = B_k + jpsubo"+id+"; C_i_j"+id+" = C_i + jpsubo"+id+";\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_4_body = phase_4_body + indent12 + "b_v"+id+" = _mm256_load_si256(B_k_j"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_4_body = phase_4_body + indent12 + "c_v"+id+" = _mm256_load_si256(C_i_j"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_4_body = phase_4_body + indent12 + "apb_v"+id+" = "+ops[op][0]+"(a_v, b_v"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_4_body = phase_4_body + indent12 + "res"+id+" = "+ops[op][1]+"(c_v"+id+", apb_v"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_4_body = phase_4_body + indent12 + "_mm256_store_si256(C_i_j"+id+", res"+id+");\n"
+
+    for i in range(unroll):
+        id = str(i)
+        phase_4_body = phase_4_body + indent12 + "jpsubo"+id+"+="+str(unroll*counter)+";\n"
+
+    phase_4_body = phase_4_body + indent11 + "}\n"
+    return phase_4_body
+
+
+def generate_program(unroll, op):
+    program = '''
 #ifdef linux
 #define min(X, Y)  ((X) < (Y) ? (X) : (Y))
 #define max(X, Y)  ((X) > (Y) ? (X) : (Y))
@@ -47,9 +236,9 @@ void opt_tiled(uint64_t* A, uint64_t* B, uint64_t* C, int L1, int n, int Bi, int
         uint64_t min_c = 0;
         __m256i a_v;
         uint64_t a = 0, c = 0, apb=0;
-        int jp = 0;
-        int jpm0; int iplnpjpm0; __m256i c_v0; __m256i b_v0; __m256i apb_v0; __m256i cmp_lt0; __m256i res0; 
-         
+        int jp = 0;\n''' + \
+        generate_vars(phase_1_vars, unroll, indent2) + \
+        '''         
         for(int k = 0; k < L1; ++k) {
             kpbm = k + sub_base_m;
             kpbln = ((k + sub_base_l) * n);
@@ -60,19 +249,9 @@ void opt_tiled(uint64_t* A, uint64_t* B, uint64_t* C, int L1, int n, int Bi, int
                         iplnpkpbm = ipln + kpbm;
                         a = A[iplnpkpbm];
                         a_v = _mm256_set_epi64x(a, a, a, a);
-                        jp = j;
-                        jpm0 = (jp + sub_base_m + 0);
-
-                        for(; jp <= j + Bj - 4; jp += 4) {
-                            iplnpjpm0 = ipln + jpm0;
-                            c_v0 = _mm256_load_si256(C + iplnpjpm0);
-                            b_v0 = _mm256_load_si256(B + kpbln + jpm0);
-                            apb_v0 = _mm256_and_si256(a_v, b_v0);
-                            res0 = _mm256_or_si256(c_v0, apb_v0);
-                            _mm256_store_si256(C + iplnpjpm0, res0);
-                            jpm0 += 4;
-                        }
-    
+                        jp = j;\n''' + \
+                        generate_phase_1_innermost_loop(unroll, op) + \
+                        '''    
                         for(; jp < j + Bj; ++jp) {
                             jpm0 = (jp + sub_base_m);
                             iplnpjpm0 = ipln + jpm0;
@@ -103,9 +282,9 @@ void opt_tiled(uint64_t* A, uint64_t* B, uint64_t* C, int L1, int n, int Bi, int
                 uint64_t a = 0;
 
                 __m256i a_v;
-                int jp = 0;
-                int jpm0; int iplnjpm0; __m256i c_v0; __m256i b_v0; __m256i apb_v0; __m256i cmp_lt0; __m256i res0; uint64_t *Bkj0; 
-
+                int jp = 0;\n''' \
+                + generate_vars(phase_2_vars, unroll, indent4) + \
+                '''
                 for(int k = 0; k < L1; ++k) {
                     kl = (k + sub_base_l);
                     kln = kl * n;
@@ -116,25 +295,15 @@ void opt_tiled(uint64_t* A, uint64_t* B, uint64_t* C, int L1, int n, int Bi, int
                                 iplnkl = ipln + kl;
                                 a = A[iplnkl];
                                 a_v = _mm256_set_epi64x(a, a, a, a);
-                                jp = j;
-                                jpm0 = (jp + sub_base_m + 0); iplnjpm0= ipln + jpm0; Bkj0=B + kln + jpm0;
-
-                                for(; jp <= j + Bj - 4; jp += 4) {
-                                    b_v0 = _mm256_load_si256(Bkj0);
-                                    c_v0 = _mm256_load_si256(C + iplnjpm0);
-                                    apb_v0 = _mm256_and_si256(a_v, b_v0);
-                                    res0 = _mm256_or_si256(c_v0, apb_v0);
-                                    _mm256_store_si256(C + iplnjpm0, res0);
-                                    iplnjpm0 += 4;
-                                    Bkj0 += 4;
-                                }
-
+                                jp = j;\n''' + \
+                                generate_phase_2_innermost_loop(unroll, op) + \
+                                '''
                                 for(; jp < j + Bj; ++jp) {
                                     jpm0 = (jp + sub_base_m);
                                     iplnjpm0 = ipln + jpm0; 
-                                    apb = a + B[kln + jpm0];
+                                    apb = '''+("a + B[kln + jpm0]" if op == 0 else "min(a, B[kln + jpm0])") +''';
                                     c = C[iplnjpm0];
-                                    min_c = min(c, apb);
+                                    min_c = '''+("min(c, apb)" if op == 0 else "max(c, apb)")+''';
                                     C[iplnjpm0] = min_c;
                                 }
                             }
@@ -159,9 +328,9 @@ void opt_tiled(uint64_t* A, uint64_t* B, uint64_t* C, int L1, int n, int Bi, int
                 uint64_t c = 0;
                 uint64_t min_c = 0;
                 uint64_t a = 0;
-                __m256i a_v;
-                int jpl0; int ipmnjpl0; int klnjpl0; __m256i c_v0; __m256i b_v0; __m256i apb_v0; __m256i cmp_lt0; __m256i res0; 
-
+                __m256i a_v;\n''' \
+                + generate_vars(phase_3_vars, unroll, indent4) + \
+                '''
                 for(int k = 0; k < L1; ++k) {
                     kl = (k + sub_base_l);
                     kln = kl * n;
@@ -172,20 +341,9 @@ void opt_tiled(uint64_t* A, uint64_t* B, uint64_t* C, int L1, int n, int Bi, int
                                 ipmnkl = ipmn + kl; 
                                 a = A[ipmnkl];
                                 a_v = _mm256_set_epi64x(a, a, a, a);
-                                jp = j;
-                                jpl0 = (jp + sub_base_l + 0);
-
-                                for(; jp <= j + Bj - 4; jp += 4) {
-                                    ipmnjpl0 = ipmn + jpl0;
-                                    klnjpl0 = kln + jpl0;
-                                    b_v0 = _mm256_load_si256(B + klnjpl0);
-                                    c_v0 = _mm256_load_si256(C + ipmnjpl0);
-                                    apb_v0 = _mm256_and_si256(a_v, b_v0);
-                                    res0 = _mm256_or_si256(c_v0, apb_v0);
-                                    _mm256_store_si256(C + ipmnjpl0, res0);
-                                    jpl0 += 4;
-                                }
-
+                                jp = j;\n''' + \
+                                generate_phase_3_innermost_loop(unroll, op) + \
+                                '''
                                 for(; jp < j + Bj; ++jp) {
                                     jpl0 = (jp + sub_base_l);
                                     ipmnjpl0 = ipmn + jpl0;
@@ -216,14 +374,14 @@ void opt_tiled(uint64_t* A, uint64_t* B, uint64_t* C, int L1, int n, int Bi, int
                         int kpsubln = 0, ipsubmn = 0;
                         int kpsubl = 0;
                         
-                        uint64_t *C_i, *B_k;
-                        int jp0; int jpsubo0; __m256i c_v0; __m256i b_v0; __m256i apb_v0; __m256i cmp_lt0; __m256i res0; uint64_t *B_k_j0; uint64_t *C_i_j0; 
-
+                        uint64_t *C_i, *B_k;\n''' \
+                        + generate_vars(phase_4_vars, unroll, indent6) + \
+                        '''
                         for(int i = 0; i < L1; i += Bi) {
                             iBi = i + Bi;
                             for(int j = 0; j < L1; j += Bj) {
                                 jBj = j + Bj;
-                                jBj4 = jBj - 4;
+                                jBj4 = jBj - ''' + str(unroll * 4) + ''';
                                 for(int k = 0; k < L1; k += Bk) {
                                     kBk = k + Bk;
                                     for(int kp = k; kp < kBk; ++kp) {
@@ -235,19 +393,9 @@ void opt_tiled(uint64_t* A, uint64_t* B, uint64_t* C, int L1, int n, int Bi, int
                                             C_i = C + ipsubmn; 
                                             jp = 0;
                                             uint64_t aa = A[ipsubmn + kpsubl];
-                                            a_v = _mm256_set_epi64x(aa, aa, aa, aa);
-                                            jpsubo0 = (sub_base_o + 0);
-
-                                            for(; jp <= jBj4; jp += 4) {
-                                                B_k_j0 = B_k + jpsubo0; C_i_j0 = C_i + jpsubo0;
-                                                b_v0 = _mm256_load_si256(B_k_j0);
-                                                c_v0 = _mm256_load_si256(C_i_j0);
-                                                apb_v0 = _mm256_and_si256(a_v, b_v0);
-                                                res0 = _mm256_or_si256(c_v0, apb_v0);
-                                                _mm256_store_si256(C_i_j0, res0);
-                                                jpsubo0+=4;
-                                            }
-
+                                            a_v = _mm256_set_epi64x(aa, aa, aa, aa);\n''' + \
+                                            generate_phase_4_innermost_loop(unroll, op) + \
+                                            '''
                                             for(; jp < j + Bj; ++jp) {
                                                 C[ipsubmn + (jp + sub_base_o)] =
                                                     C[ipsubmn + (jp + sub_base_o)] | (A[ipsubmn + (kp + sub_base_l)] & B[((kp + sub_base_l) * n) + (jp + sub_base_o)]);
@@ -367,11 +515,11 @@ double benchmark_tiled_timed(int n, void (*baseline)(uint64_t*, uint64_t*, uint6
 
     double base = rdtsc_generalized(C_base, C_base, C_base, n, baseline);
 
-    printf(" %f \n ", base);
+    printf(\" %f \\n \", base);
 
     double time = rdtsc_tiled(C_opt, C_opt, C_opt, n, L1, Bi, Bj, Bk, compute);
 
-    printf(" %f \n ", time);
+    printf(\" %f \\n \", time);
 
     // Compare both 
     for(int i = 0; i < n*n; ++i) {
@@ -396,4 +544,5 @@ int main(int argc, char **argv) {
 
     return 0;
 }
-    
+    '''
+    return program
