@@ -43,7 +43,6 @@ def set_up(file_name: string):
         return
 
     file_abs_path = os.path.join(THIS_FOLDER, file_name)
-    print(os.getcwd())
     run("gcc -o ffw " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", shell=True)
     fwi = -1
 
@@ -55,7 +54,7 @@ def set_up(file_name: string):
             if len(line.split(",")) < 2:
                 fwi = fwi + 1
                 with open(csv_file, "a") as res_dump_file:
-                    res_dump_file.write(str(fw[fwi]) + " from " + file_name + "\n")
+                    res_dump_file.write(str(fw[fwi]) + " " + file_name + "\n")
                 continue
             (n, l1, b, _) = line.split(",")
             print("Begin benchmarking " + str(fw[fwi]) + " from " + file_name +
@@ -65,7 +64,6 @@ def set_up(file_name: string):
 
 def benchmark_baseline_intermediate(file_name: string):
     file_abs_path = os.path.join(THIS_FOLDER, file_name)
-    print(os.getcwd())
     run("gcc -o ffw " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", shell=True)
 
     for impl in range(2):
