@@ -22,7 +22,10 @@ def run_benchmark(generated: bool, fwi: int, n: int, l1: int, b: int):
                 file_name = "vectorized_tiled_floyd.c"
                 file_abs_path = os.path.join(THIS_FOLDER, file_name)
                 run("gcc -o ffw " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", shell=True)
-            output = run("%s %d %d %d" % (executable_abs_path, n, l1, b), capture_output=True,
+                output = run("%s %d %d %d %d" % (executable_abs_path, n, fwi, l1, b), capture_output=True,
+                             shell=True).stdout.decode("utf-8")
+            else:
+                output = run("%s %d %d %d" % (executable_abs_path, n, l1, b), capture_output=True,
                          shell=True).stdout.decode("utf-8")
         else:
             output = run("%s %d %d %d %d" % (executable_abs_path, n, fwi, l1, b), capture_output=True,
