@@ -10,20 +10,23 @@ semi_rings = {
 }
 
 implementations = {
-    "baseline":                 0,
-    "basic_opt":                1,
-    "tiled_floyd.c":            2,
-    "vectorized_tiled_floyd.c": 3
+    "baseline":                                 0,
+    "basic_opt":                                1,
+    "tiled_floyd.c":                            2,
+    "vectorized_tiled_floyd.c":                 3,
+    "min_plus_generated_vectorized_tiled.c":    4,
+    "max_min_generated_vectorized_tiled.c":     4,
+    "or_and_generated_vectorized_tiled.c":      4
 }
 
 x = [8, 24, 72, 216, 648, 1944]  # N values
-y = np.zeros((3, 4, len(x)))     # data of baseline, basic opt, tiled, tiled vectorized
+y = np.zeros((len(semi_rings), 5, len(x)))     # data of baseline, basic opt, tiled, tiled vectorized
 cur_data = []
 impl = 0
 fwi = 0
 
 if len(sys.argv) != 2:
-    print("Error: Configuration file needed")
+    print("Error: Results file needed")
 
 # Read plot data from csv file
 config_file: str = sys.argv[1]
@@ -33,7 +36,7 @@ with open(config_file, "r") as config:
     for line in lines:
         # Handle each semi-ring for each implementation
         content = line.split(",")
-        if len(content) < 3:
+        if len(content) < len(semi_rings):
             # Skip first pass
             if len(cur_data) > 0:
                 y[semi_rings[fwi]][implementations[impl]] = cur_data
@@ -59,6 +62,7 @@ for fwi in range(3):
     # plt.plot(x, y[fwi][1], label="basic optimizations", marker='o')
     plt.plot(x, y[fwi][2], label="tiled", marker='o')
     plt.plot(x, y[fwi][3], label="tiled vectorized", marker='o')
+    plt.plot(x, y[fwi][4], label="generated tiled vectorized", marker='o')
 
     # plt.axhline(y=vect_peak_performance, label="vectorized peak performance", color='r', linestyle='--')
     plt.axhline(y=scalar_peak_performance, label="scalar peak performance", color='y', linestyle='--')
