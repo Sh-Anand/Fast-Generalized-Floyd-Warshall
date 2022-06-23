@@ -46,7 +46,7 @@ plt.axhline(y=scalar_peak_performance, label="scalar peak performance", color='y
 for i in range(0, 11):
     plt.axhspan(i, i+.5, facecolor='0.1', alpha=0.1)
 
-plt.suptitle("min plus comparison with fast existing implementation", fontweight="bold", fontsize=12, x=0.31)
+plt.suptitle("Existing \"Fast\" Implementation Comparison", fontweight="bold", fontsize=12, x=0.45)
 plt.legend()
 plt.xscale('log', base=3)
 plt.ylim([0.0, 5.5])
