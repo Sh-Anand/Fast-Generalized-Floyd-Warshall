@@ -39,11 +39,11 @@ def generate_phase_1_innermost_loop(unroll, op):
 
     for i in range(unroll):
         id = str(i)
-        phase_1_body = phase_1_body + indent7 + "c_v"+id+" = _mm256_load_si256(C + iplnpjpm"+id+");\n"
+        phase_1_body = phase_1_body + indent7 + "c_v"+id+" = _mm256_load_si256((__m256i*)(C + iplnpjpm"+id+"));\n"
 
     for i in range(unroll):
         id = str(i)
-        phase_1_body = phase_1_body + indent7 + "b_v"+id+" = _mm256_load_si256(B + kpbln + jpm"+id+");\n"
+        phase_1_body = phase_1_body + indent7 + "b_v"+id+" = _mm256_load_si256((__m256i*)(B + kpbln + jpm"+id+"));\n"
 
     for i in range(unroll):
         id = str(i)
@@ -55,7 +55,7 @@ def generate_phase_1_innermost_loop(unroll, op):
 
     for i in range(unroll):
         id = str(i)
-        phase_1_body = phase_1_body + indent7 + "_mm256_store_si256(C + iplnpjpm"+id+", res"+id+");\n"
+        phase_1_body = phase_1_body + indent7 + "_mm256_store_si256((__m256i*)(C + iplnpjpm"+id+"), res"+id+");\n"
 
     for i in range(unroll):
         id = str(i)
@@ -74,11 +74,11 @@ def generate_phase_2_innermost_loop(unroll, op):
 
     for i in range(unroll):
         id = str(i)
-        phase_2_body = phase_2_body + indent9 + "b_v"+id+" = _mm256_load_si256(Bkj"+id+");\n"
+        phase_2_body = phase_2_body + indent9 + "b_v"+id+" = _mm256_load_si256((__m256i*)(Bkj"+id+"));\n"
 
     for i in range(unroll):
         id = str(i)
-        phase_2_body = phase_2_body + indent9 + "c_v"+id+" = _mm256_load_si256(C + iplnjpm"+id+");\n"
+        phase_2_body = phase_2_body + indent9 + "c_v"+id+" = _mm256_load_si256((__m256i*)(C + iplnjpm"+id+"));\n"
 
     for i in range(unroll):
         id = str(i)
@@ -90,7 +90,7 @@ def generate_phase_2_innermost_loop(unroll, op):
 
     for i in range(unroll):
         id = str(i)
-        phase_2_body = phase_2_body + indent9 + "_mm256_store_si256(C + iplnjpm"+id+", res"+id+");\n"
+        phase_2_body = phase_2_body + indent9 + "_mm256_store_si256((__m256i*)(C + iplnjpm"+id+"), res"+id+");\n"
 
     for i in range(unroll):
         id = str(i)
@@ -121,11 +121,11 @@ def generate_phase_3_innermost_loop(unroll, op):
 
     for i in range(unroll):
         id = str(i)
-        phase_3_body = phase_3_body + indent9 + "b_v"+id+" = _mm256_load_si256(B + klnjpl"+id+");\n"
+        phase_3_body = phase_3_body + indent9 + "b_v"+id+" = _mm256_load_si256((__m256i*)(B + klnjpl"+id+"));\n"
 
     for i in range(unroll):
         id = str(i)
-        phase_3_body = phase_3_body + indent9 + "c_v"+id+" = _mm256_load_si256(C + ipmnjpl"+id+");\n"
+        phase_3_body = phase_3_body + indent9 + "c_v"+id+" = _mm256_load_si256((__m256i*)(C + ipmnjpl"+id+"));\n"
 
     for i in range(unroll):
         id = str(i)
@@ -137,7 +137,7 @@ def generate_phase_3_innermost_loop(unroll, op):
 
     for i in range(unroll):
         id = str(i)
-        phase_3_body = phase_3_body + indent9 + "_mm256_store_si256(C + ipmnjpl"+id+", res"+id+");\n"
+        phase_3_body = phase_3_body + indent9 + "_mm256_store_si256((__m256i*)(C + ipmnjpl"+id+"), res"+id+");\n"
 
     for i in range(unroll):
         id = str(i)
@@ -160,11 +160,11 @@ def generate_phase_4_innermost_loop(unroll, op):
 
     for i in range(unroll):
         id = str(i)
-        phase_4_body = phase_4_body + indent12 + "b_v"+id+" = _mm256_load_si256(B_k_j"+id+");\n"
+        phase_4_body = phase_4_body + indent12 + "b_v"+id+" = _mm256_load_si256((__m256i*)(B_k_j"+id+"));\n"
 
     for i in range(unroll):
         id = str(i)
-        phase_4_body = phase_4_body + indent12 + "c_v"+id+" = _mm256_load_si256(C_i_j"+id+");\n"
+        phase_4_body = phase_4_body + indent12 + "c_v"+id+" = _mm256_load_si256((__m256i*)(C_i_j"+id+"));\n"
 
     for i in range(unroll):
         id = str(i)
@@ -176,7 +176,7 @@ def generate_phase_4_innermost_loop(unroll, op):
 
     for i in range(unroll):
         id = str(i)
-        phase_4_body = phase_4_body + indent12 + "_mm256_store_si256(C_i_j"+id+", res"+id+");\n"
+        phase_4_body = phase_4_body + indent12 + "_mm256_store_si256((__m256i*)(C_i_j"+id+"), res"+id+");\n"
 
     for i in range(unroll):
         id = str(i)
@@ -198,7 +198,6 @@ def generate_program(unroll, op):
 #include <time.h>
 #include <inttypes.h>
 #include <immintrin.h>
-#include <assert.h>
 #include <string.h>
 
 #ifdef __x86_64__
@@ -515,16 +514,10 @@ double benchmark_tiled_timed(int n, void (*baseline)(uint64_t*, uint64_t*, uint6
 
     double base = rdtsc_generalized(C_base, C_base, C_base, n, baseline);
 
-    printf(\" %f \\n \", base);
-
     double time = rdtsc_tiled(C_opt, C_opt, C_opt, n, L1, Bi, Bj, Bk, compute);
 
-    printf(\" %f \\n \", time);
-
-    // Compare both 
-    for(int i = 0; i < n*n; ++i) {
-        assert(abs(C_opt[i] - C_base[i]) <= epsilon);
-    }
+    printf(\"%f\\n\", time);
+    printf(\"%f\\n\", base);
 
     free(C_base);
     free(C_opt);

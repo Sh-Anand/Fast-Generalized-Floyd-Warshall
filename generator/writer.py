@@ -198,7 +198,6 @@ def generate_program(unroll, op):
 #include <time.h>
 #include <inttypes.h>
 #include <immintrin.h>
-#include <assert.h>
 #include <string.h>
 
 #ifdef __x86_64__
@@ -527,16 +526,10 @@ double benchmark_tiled_timed(int n, void (*baseline)(double*, double*, double*, 
 
     double base = rdtsc_generalized(C_base, C_base, C_base, n, baseline);
 
-    printf(\" %f \\n \", base);
-
     double time = rdtsc_tiled(C_opt, C_opt, C_opt, n, L1, Bi, Bj, Bk, compute);
 
-    printf(\" %f \\n \", time);
-
-    // Compare both 
-    for(int i = 0; i < n*n; ++i) {
-        assert(abs(C_opt[i] - C_base[i]) <= epsilon);
-    }
+    printf(\"%f\\n\", time);
+    printf(\"%f\\n\", base);
 
     free(C_base);
     free(C_opt);
