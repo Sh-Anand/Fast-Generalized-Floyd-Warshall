@@ -18,6 +18,10 @@ def run_benchmark(generated: bool, fwi: int, n: int, l1: int, b: int):
     tmp_cycles = 0.0
     for i in range(repetitions_for_confidence):
         if generated:
+            if n < 216:     # If small N, run without unrolling
+                file_name = "vectorized_tiled_floyd.c"
+                file_abs_path = os.path.join(THIS_FOLDER, file_name)
+                run("gcc -o ffw " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", shell=True)
             output = run("%s %d %d %d" % (executable_abs_path, n, l1, b), capture_output=True,
                          shell=True).stdout.decode("utf-8")
         else:
