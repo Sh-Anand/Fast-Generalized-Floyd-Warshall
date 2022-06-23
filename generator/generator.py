@@ -79,8 +79,7 @@ elif len(sys.argv) == 2:
     plt.plot(x, y)
     plt.xlabel("Unrolling")
     plt.ylabel("Speedup")
-    plt.savefig("unrolling_benchmark.png")
-    plt.show()
+    plt.savefig(fw[op]+"_unrolling_benchmark.png")
     print("Best unrolling for " + fw[op] + " is = " + str(best_unrolling) + " with speedup = " + str(max_speedup))
 else:
     print("Supply exactly one argument: unrolling factor")
