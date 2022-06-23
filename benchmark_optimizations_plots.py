@@ -21,8 +21,8 @@ def run_benchmark(generated: bool, fwi: int, n: int, l1: int, b: int):
             if n < 216:     # If small N, run without unrolling
                 file_name = "vectorized_tiled_floyd.c"
                 file_abs_path = os.path.join(THIS_FOLDER, file_name)
-                run("gcc -o ffw " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", shell=True)
-                output = run("%s %d %d %d %d" % (executable_abs_path, n, fwi, l1, b), capture_output=True,
+                run("gcc -o ffw1 " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", shell=True)
+                output = run("%s %d %d %d %d" % (os.path.join(THIS_FOLDER, "ffw1"), n, fwi, l1, b), capture_output=True,
                              shell=True).stdout.decode("utf-8")
             else:
                 output = run("%s %d %d %d" % (executable_abs_path, n, l1, b), capture_output=True,
@@ -46,14 +46,13 @@ def run_benchmark(generated: bool, fwi: int, n: int, l1: int, b: int):
     print("Done benchmarking " + str(fw[fwi]) + " with N = %d" % n)
 
 
-def set_up(file_name: string):
+def set_up(file_name: string, generated: bool):
     # Check for config file
     if len(sys.argv) != 2:
         print("Error: Configuration file needed")
         return
 
-    generated = False
-    if file_name != "":
+    if not generated:
         file_abs_path = os.path.join(THIS_FOLDER, file_name)
         run("gcc -o ffw " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", shell=True)
     fwi = -1
@@ -66,15 +65,16 @@ def set_up(file_name: string):
             if len(line.split(",")) < 2:
                 fwi = fwi + 1
                 # If benchmarking generated code, run corresponding file
-                if file_name == "":
-                    generated = True
+                if generated:
                     file_name = fw[fwi]+"_generated_vectorized_tiled.c"
                     file_abs_path = os.path.join(THIS_FOLDER, file_name)
                     run("gcc -o ffw " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", shell=True)
 
                 with open(csv_file, "a") as res_dump_file:
                     res_dump_file.write(str(fw[fwi]) + " " + file_name + "\n")
+
                 continue
+
             (n, l1, b, _) = line.split(",")
             print("Begin benchmarking " + str(fw[fwi]) + " from " + file_name +
                   " with N = %s, L1 = %s, and B = %s" % (n, l1, b))
@@ -126,11 +126,11 @@ def run_generator():
 benchmark_baseline_intermediate("basic_optimizations_floyd.c")
 
 # Benchmark tiled version
-set_up("tiled_floyd.c")
+set_up("tiled_floyd.c", False)
 
 # Benchmark tiled-vectorized version
-set_up("vectorized_tiled_floyd.c")
+set_up("vectorized_tiled_floyd.c", False)
 
 # Benchmark generated unrolled tiled-vectorized version
 run_generator()
-set_up("")
+set_up("", True)
