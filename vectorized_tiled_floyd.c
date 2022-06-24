@@ -1,5 +1,4 @@
 //code largely repurposed from HW1
-//#error Please comment out the next two lines under linux, then comment this error
 //#include "stdafx.h"  //Visual studio expects this line to be the first one, comment out if different compiler
 
 #ifdef linux
@@ -7,10 +6,6 @@
 #define max(X, Y)  ((X) > (Y) ? (X) : (Y))
 #endif
 
-// #ifndef WIN32
-// #include <sys/time.h>
-// #include <windows.h> 
-// #endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
@@ -97,7 +92,6 @@ void base_fwi_abc_min_plus(double* A, double* B, double* C, int n, int l, int m,
 // NOTE All functions are inlined
 void tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int Bi, int Bj, int Bk) {
     int mm = n / L1;
-    // printf("L1 : %d, Bi : %d, Bj : %d, Bk : %d, m : %d\n", L1, Bi, Bj, Bk, m);
     for(int k = 0; k < mm; ++k) {
         //Tilling phase 1 (update C_kk)
         int l1 = k;
@@ -321,7 +315,6 @@ void tiled_fw_min_plus(double* A, double* B, double* C, int L1, int n, int Bi, i
 // NOTE All functions are inlined
 void tiled_fw_max_min(double* A, double* B, double* C, int L1, int n, int Bi, int Bj, int Bk) {
     int mm = n / L1;
-    // printf("L1 : %d, Bi : %d, Bj : %d, Bk : %d, m : %d\n", L1, Bi, Bj, Bk, m);
     for(int k = 0; k < mm; ++k) {
         //Tilling phase 1 (update C_kk)
         int l1 = k;
@@ -374,7 +367,6 @@ void tiled_fw_max_min(double* A, double* B, double* C, int L1, int n, int Bi, in
         //Tilling phase 2 (Update all tiles in same row as C_kk)
         for(int j = 0; j < mm; ++j) {
             if(j != k) {
-                //fwi_phase2_min_plus(A, B, C, n, k, j, L1, Bi, Bj);
                 int l2 = k;
                 int m2 = j;
                 int sub_base_l = l2 * L1;
@@ -547,7 +539,6 @@ void tiled_fw_max_min(double* A, double* B, double* C, int L1, int n, int Bi, in
 // NOTE All functions are inlined
 void tiled_fw_or_and(u_int64_t* A, u_int64_t* B, u_int64_t* C, int L1, int n, int Bi, int Bj, int Bk) {
     int mm = n / L1;
-    // printf("L1 : %d, Bi : %d, Bj : %d, Bk : %d, m : %d\n", L1, Bi, Bj, Bk, m);
     for(int k = 0; k < mm; ++k) {
         //Tilling phase 1 (update C_kk)
         int l1 = k;
@@ -600,7 +591,6 @@ void tiled_fw_or_and(u_int64_t* A, u_int64_t* B, u_int64_t* C, int L1, int n, in
         //Tilling phase 2 (Update all tiles in same row as C_kk)
         for(int j = 0; j < mm; ++j) {
             if(j != k) {
-                //fwi_phase2_min_plus(A, B, C, n, k, j, L1, Bi, Bj);
                 int l2 = k;
                 int m2 = j;
                 int sub_base_l = l2 * L1;
@@ -945,29 +935,10 @@ double benchmark_tiled_timed_or_and(int n, void (*baseline)(u_int64_t*, u_int64_
     u_int64_t* C_opt = (u_int64_t*)aligned_alloc(32, n*n*sizeof(u_int64_t));
 
     init_bit_matrices(C_base, C_opt, n);
-    
-    //printf("RECEIVED L1 : %d\n", L1);
-
-    // Run baseline function on C
-    //baseline(C_base, C_base, C_base, n);
-
-    // Run optimized function on C
-    //compute(C_opt, C_opt, C_opt, L1, n, Bi, Bj, Bk);
 
     double base = rdtsc_generalized_or_and(C_base, C_base, C_base, n, baseline);
 
-    //printf("Time taken to run generalized : %f\n", base);
-
     double time = rdtsc_tiled_or_and(C_opt, C_opt, C_opt, n, L1, Bi, Bj, Bk, compute);
-
-    //printf("Time taken to run tiled       : %f\n", time);
-
-    // Compare both 
-    for(int i = 0; i < n*n; ++i) {
-        //assert(C_opt[i] == C_base[i]);
-    }
-
-    //printf("Comparison passed for or and!\n");
 
     free(C_base);
     free(C_opt);
@@ -985,28 +956,9 @@ double benchmark_tiled_timed(int n, void (*baseline)(double*, double*, double*, 
 
     init_matrices(C_base, C_opt, n);
 
-    //printf("RECEIVED L1 : %d\n", L1);
-
-    // Run baseline function on C
-    //baseline(C_base, C_base, C_base, n);
-
-    // Run optimized function on C
-    //compute(C_opt, C_opt, C_opt, L1, n, Bi, Bj, Bk);
-
     double base = rdtsc_generalized(C_base, C_base, C_base, n, baseline);
 
-    //printf("Time taken to run generalized : %f\n", base);
-
     double time = rdtsc_tiled(C_opt, C_opt, C_opt, n, L1, Bi, Bj, Bk, compute);
-
-    //printf("Time taken to run tiled       : %f\n", time);
-
-    // Compare both 
-    for(int i = 0; i < n*n; ++i) {
-        assert(abs(C_opt[i] - C_base[i]) <= EPS);
-    }
-
-    //printf("Comparison passed!\n");
 
     free(C_base);
     free(C_opt);

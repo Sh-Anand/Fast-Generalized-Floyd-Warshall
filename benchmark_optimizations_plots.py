@@ -3,6 +3,7 @@ import string
 import sys
 from subprocess import run
 
+MIN_N = 8
 MAX_N = (2 ** 12)
 semi_rings = 3
 repetitions_for_confidence = 10
@@ -92,7 +93,7 @@ def benchmark_baseline_intermediate(file_name: string):
             with open(csv_file, "a") as res_dump_file:
                 res_dump_file.write(str(fw[fwi]) + " " + str(implementations[impl]) + "\n")
 
-            n = 8
+            n = MIN_N
 
             while n <= MAX_N:
                 tmp_cycles = 0.0

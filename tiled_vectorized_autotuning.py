@@ -1,7 +1,5 @@
-from subprocess import run
-
-import re
 import os
+from subprocess import run
 from platform import system
 
 compiled_file = "ffw" + (".exe " if system() == "Windows" else ".out")  # do not remove space
@@ -41,7 +39,8 @@ for fwi in range(3):
                             tmp_cycles = 0.0
                             for i in range(repetitions_for_confidence):
 
-                                output = run("%s %d %d %d %d" % (executable_abs_path, n, fwi, L1, B), capture_output=True, shell=True).stdout.decode("utf-8")
+                                output = run("%s %d %d %d %d" % (executable_abs_path, n, fwi, L1, B),
+                                             capture_output=True, shell=True).stdout.decode("utf-8")
 
                                 cycles = float(output.split()[0])
                                 tmp_cycles = tmp_cycles + cycles
@@ -53,11 +52,13 @@ for fwi in range(3):
 
                             # Store results in case of crash
                             with open("result_dump.csv", "a") as res_dump_file:
-                                csv_res = "%s, %d, %d, %d, %d, %lf\n" % (fw[fwi], n, L1, B, tmp_cycles, (2*(n**3) / tmp_cycles))
+                                csv_res = "%s, %d, %d, %d, %d, %lf\n" % (fw[fwi], n, L1, B, tmp_cycles,
+                                                                         (2*(n**3) / tmp_cycles))
                                 res_dump_file.write(csv_res)
 
                             # Print benchmark
-                            print("Done benchmarking " + str(fw[fwi]) + " with N = %d, L1 = %d, and B = %d" % (n, L1, B))
+                            print("Done benchmarking " + str(fw[fwi])
+                                  + " with N = %d, L1 = %d, and B = %d" % (n, L1, B))
                         except IndexError:
                             B = B + 1
                             continue
@@ -92,10 +93,8 @@ for fwi in range(3):
     for (flops, cycles, _n, _L1, _B) in res:
         # Find the best config for each n
         if cur_n == _n:
-            # print("\nBEST: %lf\nFLOPS: %lf\n" % (best_flops, flops))
             # check for an improved performance
             if flops >= best_flops:
-                # print("\nOLD_BEST: %lf\nNEW_BEST: %lf\n" % (best_flops, flops))
                 best_flops = flops
                 cur_best_config = (_L1, _B)
         else:
@@ -120,4 +119,3 @@ for fwi in range(3):
     with open("best_results.csv", "w") as best_res_file:
         for (best_n, best_l1, best_b, final_flops) in bestRes:
             best_res_file.write("%s, %d, %d, %d, %lf\n" % (fw[fwi], best_n, best_l1, best_b, final_flops))
-

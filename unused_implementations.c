@@ -1,5 +1,4 @@
 //code largely repurposed from HW1
-//#error Please comment out the next two lines under linux, then comment this error
 //#include "stdafx.h"  //Visual studio expects this line to be the first one, comment out if different compiler
 
 #ifdef linux
@@ -7,10 +6,6 @@
 #define max(X, Y)  ((X) > (Y) ? (X) : (Y))
 #endif
 
-// #ifndef WIN32
-// #include <sys/time.h>
-// #include <windows.h> 
-// #endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
@@ -25,7 +20,6 @@
 
 #define NUM_RUNS 1
 #define CYCLES_REQUIRED 1e8
-#define FREQUENCY 2.7e9
 #define CALIBRATE
 #define ZERO_PROBABILITY 10 //1/ZERO_PROBABILITY is the probability of an entry in the bit matrix being zero
 #define EPS  0.000001
@@ -561,15 +555,12 @@ void vect_fw_min_plus(double *C, int n) {
         int i_n = 0;
         for (size_t i = 0; i < n; i++) {
             addr_ik = &(C[i_n + k]);
-            //printf("%lu %lu %u\n", i, k, i_n);
-            //printf("%lx\n", (u_int64_t)addr_ik);
             c_ik = _mm256_set1_pd(*addr_ik);
 
             for (size_t j = 0; j < n - 4; j+=4) {
                 addr_ij = &(C[i_n + j]);
-                //printf("%lx\n", (u_int64_t)addr_ij);
                 addr_kj = &(C[k*n + j]);
-                //printf("%lx\n", (u_int64_t)addr_kj);
+
                 c_ij = _mm256_load_pd(addr_ij);
                 c_kj = _mm256_load_pd(addr_kj);
 
@@ -635,7 +626,6 @@ void fw_or_and_int(u_int64_t *C, int n) {
     for (size_t k = 0; k < n; k++) {
         for (size_t i = 0; i < n; i++) {
             for (size_t j = 0; j < n; j++) {
-                //printf("%lx \n", C[i*n + k]);
                 C[i*n + j] = C[i*n + j] | (C[i*n + k] & C[k*n + j]);
             }
         }
@@ -643,8 +633,6 @@ void fw_or_and_int(u_int64_t *C, int n) {
 }
 
 void opt_fw_or_and_256(u_int64_t *C,int n) {
-    // with assert doesn't work
-    //assert((u_int64_t) C % 32 == 0);
     u_int64_t *c_addr = C, *addr_ik, *addr_ij , *addr_kj;
     __m256i c_ij, c_ik, c_kj, c2, cmp_lt, res;
     for (size_t k = 0; k < n; k++) {
@@ -652,39 +640,19 @@ void opt_fw_or_and_256(u_int64_t *C,int n) {
         for (size_t i = 0; i < n; i++) {
             size_t j = 0;
             addr_ik = c_addr + (i_n + k);
-            //printf("access ik");
             
             c_ik = _mm256_set_epi64x (*addr_ik,
                                         *addr_ik,
                                         *addr_ik,
                                         *addr_ik);
-            //printf("%04llx\n", (unsigned long long)*addr_ik);
-            /* printf("cik : ");
-            print_vector(c_ik); */
             for (; j < n - 4; j+=4) {
                 addr_ij = c_addr + (i_n + j);
                 addr_kj = c_addr + (k*n + j);
-                //printf("access ij");
                 c_ij = _mm256_load_si256((__m256i *)addr_ij);
-                
-                /* printf("cij : ");
-                print_vector(c_ij); */
-                //printf("access kj");
                 c_kj = _mm256_load_si256((__m256i *)addr_kj);
- /*                
-                printf("ckj : ");
-                print_vector(c_kj);
-       */          
                 c2 = _mm256_and_si256(c_ik, c_kj);
 
-               /*  printf("and : ");
-                print_vector(c2); */
-
                 res = _mm256_or_si256(c_ij, c2);
-
-                /* printf("or : ");
-                print_vector(res); */
-                //printf("store ij");
                 _mm256_store_si256((__m256i *) addr_ij ,res);
             }
             
@@ -692,7 +660,6 @@ void opt_fw_or_and_256(u_int64_t *C,int n) {
                 C[i_n + j] = C[i_n + j] | ( C[i_n + k] &  C[k*n + j]); 
                 printf("%d %d %d\n", (int)(i_n+j), (int)(i_n+k),(int)(k*n + j));
             }
-            
             i_n += n;
         }
     }
@@ -866,16 +833,7 @@ void test_tiled(int n, void (*baseline)(double*, double*, double*, int),
     
     // Run optimized function on C
     optimization(A_opt, B_opt, C_opt, L1, n, Bi, Bj, Bk);
-    /*
-    printf("\n");
-    for(int i = 0; i < n; i++) {
-        for(int j = 0; j < n; j++) {
-            printf("base[%d][%d] = %lf ", i, j, C_base[n*i + j]);
-            printf("opt[%d][%d] = %lf\n", i, j, C_opt[n*i + j]);
-        }
-    }
-    printf("\n");
-    */
+
     // Compare both 
     for(int i = 0; i < n*n; ++i) {
         assert(C_opt[i] == C_base[i]);
@@ -893,28 +851,12 @@ void test(int n, void (*baseline)(double*, int), void (*optimization)(double*, i
     double *C_base = (double *)malloc(n*n*sizeof(double));
     double *C_opt = (double *)aligned_alloc(32, n*n*sizeof(double));
     init_matrices(C_base, C_opt, n);
-    
-/*     for(int i = 0; i < n; i++){
-        for(int j = 0; j < n; j++){
-            printf("%lf", C_base[n*i + j]);
-            printf("%lf", C_opt[n*i + j]);
-        }
-    }
- */
+
     // Run baseline function on C
     baseline(C_base, n);
     // Run optimized function on C
     optimization(C_opt, n);
-    /*
-    for(int i = 0; i < n; i++) {
-        for(int j = 0; j < n; j++) {
-            //printf("base[%d][%d] = %lf ", i, j, C_base[n*i + j]);
-            //printf("opt[%d][%d] = %lf\n", i, j, C_opt[n*i + j]);
-            print_bits(C_base[n*i + j]);
-            print_bits(C_opt[n*i + j]);
-        }
-    }
-    */
+
     // Compare both
     for(int i = 0; i < n; ++i) {
         assert(abs(C_opt[i] - C_base[i])  <= EPS);
@@ -940,16 +882,6 @@ int main(int argc, char **argv) {
     printf("%s\n", msg[fwi]);
     printf(" FW : RDTSC instruction:\n %lf cycles measured\n\n", r);
 #endif
-    /*
-    for(int i = 0; i < n; i++)
-        for(int j = 0; j < n; j++)
-            printf("%lf", C[n*i + j]);
-    */
-    //printf("\n");
-    test(n, fw_min_plus, vect_fw_min_plus);
-    //test_blocked(n, fw_min_plus, opt_blocked_fw_min_plus);
-    //test_tiled(n, fw_abc_min_plus, tiled_fw_min_plus);
-    //test_or_and(n);
 
     free(C);
 

@@ -1,5 +1,4 @@
 //code largely repurposed from HW1
-//#error Please comment out the next two lines under linux, then comment this error
 //#include "stdafx.h"  //Visual studio expects this line to be the first one, comment out if different compiler
 
 #ifdef linux
@@ -7,10 +6,6 @@
 #define max(X, Y)  ((X) > (Y) ? (X) : (Y))
 #endif
 
-// #ifndef WIN32
-// #include <sys/time.h>
-// #include <windows.h> 
-// #endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <inttypes.h>
@@ -24,7 +19,6 @@
 
 #define NUM_RUNS 1
 #define CYCLES_REQUIRED 1e8
-#define FREQUENCY 2.7e9
 #define CALIBRATE
 #define ZERO_PROBABILITY 10 //1/ZERO_PROBABILITY is the probability of an entry in the bit matrix being zero
 #define EPS  0.000001
@@ -58,7 +52,6 @@ void fw_or_and_int(u_int64_t *C, int n) {
     for (size_t k = 0; k < n; k++) {
         for (size_t i = 0; i < n; i++) {
             for (size_t j = 0; j < n; j++) {
-                //printf("%lx \n", C[i*n + k]);
                 C[i*n + j] = C[i*n + j] | (C[i*n + k] & C[k*n + j]);
             }
         }
@@ -317,6 +310,12 @@ double benchmark(int impl, int fw_idx, int n) {
     return time;
 }
 
+/**
+ * @brief Check if the optimized function yields the same results as the baseline.
+ * @param n input size
+ * @param baseline min_plus or max_min baseline function
+ * @param optimization min_plus or max_min optimized function
+ */
 void test(int n, void (*baseline)(double*, int), void (*optimization)(double*, int)) {
     double *C_base = (double *)malloc(n*n*sizeof(double));
     double *C_opt = (double *)aligned_alloc(32, n*n*sizeof(double));
@@ -336,6 +335,10 @@ void test(int n, void (*baseline)(double*, int), void (*optimization)(double*, i
     free(C_opt);
 }
 
+/**
+ * @brief Check if the optimized or_and function yields the same results as the baseline.
+ * @param n input size
+ */
 void test_or_and(int n){
     u_int64_t *C_base = (u_int64_t *)malloc(n*n*sizeof(double));
     u_int64_t *C_opt = (u_int64_t *)malloc(n*n*sizeof(double));
@@ -358,7 +361,8 @@ void test_or_and(int n){
 
 int main(int argc, char **argv) {
     if (argc!=4) {
-        printf("usage: FW <n> <fw> <baseline> (fw = 0,1,2 = (min,plus), (max, min), (or,and); baseline = 0 (generalized), 1 (base opt)\n");
+        printf("usage: FW <n> <fw> <baseline> (fw = 0,1,2 = (min,plus), (max, min), (or,and); "
+               "baseline = 0 (generalized), 1 (base opt)\n");
         return -1;
     }
 
@@ -374,11 +378,6 @@ int main(int argc, char **argv) {
     double r  = benchmark(impl, fw_idx, n);
     printf(" %lf", r);
 #endif
-
-    // Compare our results with the base implementation
-//    test(n, fw_min_plus, basic_optimization_to_plot_min_plus);
-//    test_or_and(n);
-//    test(n, fw_max_min, basic_optimization_to_plot_max_min);
 
     return 0;
 }

@@ -20,7 +20,7 @@ implementations = {
 }
 
 x = [8, 24, 72, 216, 648, 1944]  # N values
-y = np.zeros((len(semi_rings), 5, len(x)))     # data of baseline, basic opt, tiled, tiled vectorized
+y = np.zeros((len(semi_rings), 5, len(x)))  # data of baseline, basic opt, tiled, tiled vectorized, generated
 cur_data = []
 impl = 0
 fwi = 0

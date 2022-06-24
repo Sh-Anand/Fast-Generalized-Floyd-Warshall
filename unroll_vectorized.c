@@ -1,5 +1,4 @@
 //code largely repurposed from HW1
-//#error Please comment out the next two lines under linux, then comment this error
 //#include "stdafx.h"  //Visual studio expects this line to be the first one, comment out if different compiler
 
 #ifdef linux
@@ -7,10 +6,6 @@
 #define max(X, Y)  ((X) > (Y) ? (X) : (Y))
 #endif
 
-// #ifndef WIN32
-// #include <sys/time.h>
-// #include <windows.h> 
-// #endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
@@ -622,12 +617,6 @@ double benchmark_tiled_timed(int n, void (*baseline)(double*, double*, double*, 
     init_matrices(C_base, C_opt, n);
 
     printf("RECEIVED L1 : %d\n", L1);
-
-    // Run baseline function on C
-    //baseline(C_base, C_base, C_base, n);
-
-    // Run optimized function on C
-    //compute(C_opt, C_opt, C_opt, L1, n, Bi, Bj, Bk);
 
     double base = rdtsc_generalized(C_base, C_base, C_base, n, baseline);
 

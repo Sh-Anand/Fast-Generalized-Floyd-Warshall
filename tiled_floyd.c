@@ -1,5 +1,4 @@
 //code largely repurposed from HW1
-//#error Please comment out the next two lines under linux, then comment this error
 //#include "stdafx.h"  //Visual studio expects this line to be the first one, comment out if different compiler
 
 #ifdef linux
@@ -7,10 +6,7 @@
 #define max(X, Y)  ((X) > (Y) ? (X) : (Y))
 #endif
 
-// #ifndef WIN32
-// #include <sys/time.h>
-// #include <windows.h> 
-// #endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
@@ -28,6 +24,11 @@
 #define FREQUENCY 2.7e9
 #define CALIBRATE
 #define ZERO_PROBABILITY 10 //1/ZERO_PROBABILITY is the probability of an entry in the bit matrix being zero
+
+
+//============================================================================================
+// =============================== BASE IMPLEMENTATIONS ======================================
+//============================================================================================
 
 void fw_abc_min_plus(double* A, double* B, double* C, int n) {
     for (size_t k = 0; k < n; k++) {
@@ -58,6 +59,10 @@ void fw_abc_or_and(uint64_t* A, uint64_t* B, uint64_t* C, int n) {
         }
     }
 }
+
+//============================================================================================
+// =============================== TILED IMPLEMENTATIONS =====================================
+//============================================================================================
 
 /**
  * @brief Tiled FW implementation for MIN_PLUS
@@ -599,6 +604,8 @@ void tiled_fw_or_and(uint64_t* A, uint64_t* B, uint64_t* C, int L1, int n, int B
     }
 }
 
+//====================================================================================================
+
 void init_matrices(double *C1, double *C2, int n) {
     double x;
     for (size_t i = 0; i < n; i++) {
@@ -779,31 +786,18 @@ double benchmark_tiled(int n, void (*baseline)(double*, double*, double*, int),
     void (*compute)(double*, double*, double*, int, int, int, int, int),
     int L1, int Bi, int Bj, int Bk
 ) {
-
-//    double *C_base = (double *)malloc(n*n*sizeof(double));
+    double *C_base = (double *)malloc(n*n*sizeof(double));
     double *C_opt = (double *)malloc(n*n*sizeof(double));
 
-//    init_matrices(C_base, C_opt, n);
+    init_matrices(C_base, C_opt, n);
 
-//    printf("RECEIVED L1 : %d\n", L1);
-//
-//    double base = rdtsc_generalized(C_base, C_base, C_base, n, baseline);
-//
-//    printf("Time taken to run generalized : %f\n", base);
+    double base = rdtsc_generalized(C_base, C_base, C_base, n, baseline);
 
     double time = rdtsc_tiled(C_opt, C_opt, C_opt, n, L1, Bi, Bj, Bk, compute);
 
-//    printf("Time taken to run tiled :       %f\n", time);
     printf("%lf\n", time);
 
-    // Compare both 
-//    for(int i = 0; i < n*n; ++i) {
-//        assert(abs(C_opt[i] - C_base[i]) <= epsilon);
-//    }
-
-//    printf("Comparison passed!\n");
-
-//    free(C_base);
+    free(C_base);
     free(C_opt);
 
     return time;
@@ -819,23 +813,11 @@ double benchmark_tiled_or(int n, void (*baseline)(uint64_t*, uint64_t*, uint64_t
 
     init_bit_matrices(C_base, C_opt, n);
 
-//    printf("RECEIVED L1 : %d\n", L1);
-//
-//    double base = rdtsc_generalized_or(C_base, C_base, C_base, n, baseline);
-//
-//    printf("Time taken to run generalized : %f\n", base);
+    double base = rdtsc_generalized_or(C_base, C_base, C_base, n, baseline);
 
     double time = rdtsc_tiled_or(C_opt, C_opt, C_opt, n, L1, Bi, Bj, Bk, compute);
 
-//    printf("Time taken to run tiled :       %f\n", time);
     printf("%lf\n", time);
-
-    // Compare both 
-//    for(int i = 0; i < n*n; ++i) {
-//        assert(C_opt[i] == C_base[i]);
-//    }
-
-//    printf("Comparison passed!\n");
 
     free(C_base);
     free(C_opt);
@@ -850,7 +832,6 @@ int main(int argc, char **argv) {
     int L1 = atoi(argv[3]);
     int Bi,Bj,Bk;
     Bi = Bj = Bk = atoi(argv[4]);
-//    printf("n=%d \n",n);
 
     double r = 0;
 #ifdef __x86_64__
@@ -869,6 +850,5 @@ int main(int argc, char **argv) {
         break;
     }
 #endif
-//    printf(" FW : RDTSC instruction:\n %lf cycles measured\n\n", r);
     return 0;
 }
