@@ -53,7 +53,6 @@ with open(config_file, "r") as config:
 
 fw = ["(min, +)", "(or, and)", "(max, min)"]
 fw_file_name = ["min_plus", "or_and", "max_min"]
-vect_peak_performance = 9.94
 scalar_peak_performance = 2.48
 
 # Plot the results
@@ -62,18 +61,17 @@ for fwi in range(3):
     # plt.plot(x, y[fwi][1], label="basic optimizations", marker='o')
     plt.plot(x, y[fwi][2], label="tiled", marker='o')
     plt.plot(x, y[fwi][3], label="tiled vectorized", marker='o')
-    plt.plot(x, y[fwi][4], label="generated tiled vectorized", marker='o')
+    plt.plot(x, y[fwi][4], label="generated tiled vectorized", marker='x')
 
-    # plt.axhline(y=vect_peak_performance, label="vectorized peak performance", color='r', linestyle='--')
-    plt.axhline(y=scalar_peak_performance, label="scalar peak performance", color='y', linestyle='--')
+    plt.axhline(y=scalar_peak_performance, label="scalar peak performance", color='hotpink', linestyle='--')
 
     # Gray background lines
     for i in range(0, 11):
-        plt.axhspan(i, i+.5, facecolor='0.1', alpha=0.1)
+        plt.axhspan(i, i+.5, facecolor='0.1', alpha=0.09)
 
-    plt.suptitle(fw[fwi] + " performances", fontweight="bold", fontsize=12, x=0.31)
+    plt.suptitle(fw[fwi] + " performances", fontweight="bold", fontsize=12, x=0.29)
     plt.title("flags: -march=native -O3 -ffast-math", loc='left')
-    plt.legend()
+    plt.legend(bbox_to_anchor=(1, 1))
     plt.xscale('log', base=3)
     plt.ylim([0.0, 5.5])
     plt.xlabel("N")
