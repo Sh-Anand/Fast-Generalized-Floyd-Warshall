@@ -1,4 +1,5 @@
 import sys
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -25,6 +26,11 @@ cur_data = []
 impl = 0
 fwi = 0
 
+try:
+    os.makedirs("./plots")
+except Exception as err:
+    pass #probably exists
+
 if len(sys.argv) != 2:
     print("Error: Results file needed")
 
@@ -43,6 +49,7 @@ with open(config_file, "r") as config:
                 cur_data = []
 
             (fwi, impl) = content[0].rstrip("\n").split(" ")
+            impl = impl.lstrip("../")
         else:
             (_, _, perf) = content
             cur_data.append(perf)
