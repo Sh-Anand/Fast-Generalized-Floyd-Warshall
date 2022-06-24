@@ -5,7 +5,7 @@ from subprocess import run
 THIS_FOLDER = os.path.dirname(os.path.abspath(__file__))
 fw = ["min_plus", "max_min", "or_and"]  # functions in generalized floyd warshall
 perf_command = "sudo perf stat -B -e cache-references,cache-misses,cycles,instructions,branches,faults,migrations"
-flags = " tsc_x86.h -march=native -O3 -ffast-math"
+flags = " ../tsc_x86.h -march=native -O3 -ffast-math"
 
 
 def read_config_file():
@@ -28,7 +28,7 @@ def read_config_file():
             print("Begin benchmarking " + str(fw[fwi]) + " with N = %s, L1 = %s, and B = %s" % (n, l1, b))
 
             if int(n) < 216:     # If small N, run without unrolling
-                file_abs_path = os.path.join(THIS_FOLDER, "vectorized_tiled_floyd.c")
+                file_abs_path = os.path.join(THIS_FOLDER, "../vectorized_tiled_floyd.c")
                 run("gcc -o ffw " + file_abs_path + flags, shell=True)
                 executable_abs_path = os.path.join(THIS_FOLDER, "ffw")
                 run(perf_command + " %s %d %d %d %d" % (executable_abs_path, int(n), fwi, int(l1), int(b)), shell=True)

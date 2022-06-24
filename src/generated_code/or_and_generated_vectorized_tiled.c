@@ -9,11 +9,10 @@
 #include <time.h>
 #include <inttypes.h>
 #include <immintrin.h>
-#include <assert.h>
 #include <string.h>
 
 #ifdef __x86_64__
-#include "tsc_x86.h"
+#include "../tsc_x86.h"
 #endif
 
 #define NUM_RUNS 1
@@ -49,6 +48,8 @@ void opt_tiled(uint64_t* A, uint64_t* B, uint64_t* C, int L1, int n, int Bi, int
         uint64_t a = 0, c = 0, apb=0;
         int jp = 0;
         int jpm0; int iplnpjpm0; __m256i c_v0; __m256i b_v0; __m256i apb_v0; __m256i cmp_lt0; __m256i res0; 
+        int jpm1; int iplnpjpm1; __m256i c_v1; __m256i b_v1; __m256i apb_v1; __m256i cmp_lt1; __m256i res1; 
+        int jpm2; int iplnpjpm2; __m256i c_v2; __m256i b_v2; __m256i apb_v2; __m256i cmp_lt2; __m256i res2; 
          
         for(int k = 0; k < L1; ++k) {
             kpbm = k + sub_base_m;
@@ -62,15 +63,31 @@ void opt_tiled(uint64_t* A, uint64_t* B, uint64_t* C, int L1, int n, int Bi, int
                         a_v = _mm256_set_epi64x(a, a, a, a);
                         jp = j;
                         jpm0 = (jp + sub_base_m + 0);
+                        jpm1 = (jp + sub_base_m + 4);
+                        jpm2 = (jp + sub_base_m + 8);
 
-                        for(; jp <= j + Bj - 4; jp += 4) {
+                        for(; jp <= j + Bj - 4; jp += 12) {
                             iplnpjpm0 = ipln + jpm0;
-                            c_v0 = _mm256_load_si256(C + iplnpjpm0);
-                            b_v0 = _mm256_load_si256(B + kpbln + jpm0);
+                            iplnpjpm1 = ipln + jpm1;
+                            iplnpjpm2 = ipln + jpm2;
+                            c_v0 = _mm256_load_si256((__m256i*)(C + iplnpjpm0));
+                            c_v1 = _mm256_load_si256((__m256i*)(C + iplnpjpm1));
+                            c_v2 = _mm256_load_si256((__m256i*)(C + iplnpjpm2));
+                            b_v0 = _mm256_load_si256((__m256i*)(B + kpbln + jpm0));
+                            b_v1 = _mm256_load_si256((__m256i*)(B + kpbln + jpm1));
+                            b_v2 = _mm256_load_si256((__m256i*)(B + kpbln + jpm2));
                             apb_v0 = _mm256_and_si256(a_v, b_v0);
+                            apb_v1 = _mm256_and_si256(a_v, b_v1);
+                            apb_v2 = _mm256_and_si256(a_v, b_v2);
                             res0 = _mm256_or_si256(c_v0, apb_v0);
-                            _mm256_store_si256(C + iplnpjpm0, res0);
-                            jpm0 += 4;
+                            res1 = _mm256_or_si256(c_v1, apb_v1);
+                            res2 = _mm256_or_si256(c_v2, apb_v2);
+                            _mm256_store_si256((__m256i*)(C + iplnpjpm0), res0);
+                            _mm256_store_si256((__m256i*)(C + iplnpjpm1), res1);
+                            _mm256_store_si256((__m256i*)(C + iplnpjpm2), res2);
+                            jpm0 += 12;
+                            jpm1 += 12;
+                            jpm2 += 12;
                         }
     
                         for(; jp < j + Bj; ++jp) {
@@ -105,6 +122,8 @@ void opt_tiled(uint64_t* A, uint64_t* B, uint64_t* C, int L1, int n, int Bi, int
                 __m256i a_v;
                 int jp = 0;
                 int jpm0; int iplnjpm0; __m256i c_v0; __m256i b_v0; __m256i apb_v0; __m256i cmp_lt0; __m256i res0; uint64_t *Bkj0; 
+                int jpm1; int iplnjpm1; __m256i c_v1; __m256i b_v1; __m256i apb_v1; __m256i cmp_lt1; __m256i res1; uint64_t *Bkj1; 
+                int jpm2; int iplnjpm2; __m256i c_v2; __m256i b_v2; __m256i apb_v2; __m256i cmp_lt2; __m256i res2; uint64_t *Bkj2; 
 
                 for(int k = 0; k < L1; ++k) {
                     kl = (k + sub_base_l);
@@ -118,15 +137,31 @@ void opt_tiled(uint64_t* A, uint64_t* B, uint64_t* C, int L1, int n, int Bi, int
                                 a_v = _mm256_set_epi64x(a, a, a, a);
                                 jp = j;
                                 jpm0 = (jp + sub_base_m + 0); iplnjpm0= ipln + jpm0; Bkj0=B + kln + jpm0;
+                                jpm1 = (jp + sub_base_m + 4); iplnjpm1= ipln + jpm1; Bkj1=B + kln + jpm1;
+                                jpm2 = (jp + sub_base_m + 8); iplnjpm2= ipln + jpm2; Bkj2=B + kln + jpm2;
 
-                                for(; jp <= j + Bj - 4; jp += 4) {
-                                    b_v0 = _mm256_load_si256(Bkj0);
-                                    c_v0 = _mm256_load_si256(C + iplnjpm0);
+                                for(; jp <= j + Bj - 12; jp += 12) {
+                                    b_v0 = _mm256_load_si256((__m256i*)(Bkj0));
+                                    b_v1 = _mm256_load_si256((__m256i*)(Bkj1));
+                                    b_v2 = _mm256_load_si256((__m256i*)(Bkj2));
+                                    c_v0 = _mm256_load_si256((__m256i*)(C + iplnjpm0));
+                                    c_v1 = _mm256_load_si256((__m256i*)(C + iplnjpm1));
+                                    c_v2 = _mm256_load_si256((__m256i*)(C + iplnjpm2));
                                     apb_v0 = _mm256_and_si256(a_v, b_v0);
+                                    apb_v1 = _mm256_and_si256(a_v, b_v1);
+                                    apb_v2 = _mm256_and_si256(a_v, b_v2);
                                     res0 = _mm256_or_si256(c_v0, apb_v0);
-                                    _mm256_store_si256(C + iplnjpm0, res0);
-                                    iplnjpm0 += 4;
-                                    Bkj0 += 4;
+                                    res1 = _mm256_or_si256(c_v1, apb_v1);
+                                    res2 = _mm256_or_si256(c_v2, apb_v2);
+                                    _mm256_store_si256((__m256i*)(C + iplnjpm0), res0);
+                                    _mm256_store_si256((__m256i*)(C + iplnjpm1), res1);
+                                    _mm256_store_si256((__m256i*)(C + iplnjpm2), res2);
+                                    iplnjpm0 += 12;
+                                    iplnjpm1 += 12;
+                                    iplnjpm2 += 12;
+                                    Bkj0 += 12;
+                                    Bkj1 += 12;
+                                    Bkj2 += 12;
                                 }
 
                                 for(; jp < j + Bj; ++jp) {
@@ -161,6 +196,8 @@ void opt_tiled(uint64_t* A, uint64_t* B, uint64_t* C, int L1, int n, int Bi, int
                 uint64_t a = 0;
                 __m256i a_v;
                 int jpl0; int ipmnjpl0; int klnjpl0; __m256i c_v0; __m256i b_v0; __m256i apb_v0; __m256i cmp_lt0; __m256i res0; 
+                int jpl1; int ipmnjpl1; int klnjpl1; __m256i c_v1; __m256i b_v1; __m256i apb_v1; __m256i cmp_lt1; __m256i res1; 
+                int jpl2; int ipmnjpl2; int klnjpl2; __m256i c_v2; __m256i b_v2; __m256i apb_v2; __m256i cmp_lt2; __m256i res2; 
 
                 for(int k = 0; k < L1; ++k) {
                     kl = (k + sub_base_l);
@@ -174,16 +211,34 @@ void opt_tiled(uint64_t* A, uint64_t* B, uint64_t* C, int L1, int n, int Bi, int
                                 a_v = _mm256_set_epi64x(a, a, a, a);
                                 jp = j;
                                 jpl0 = (jp + sub_base_l + 0);
+                                jpl1 = (jp + sub_base_l + 4);
+                                jpl2 = (jp + sub_base_l + 8);
 
-                                for(; jp <= j + Bj - 4; jp += 4) {
+                                for(; jp <= j + Bj - 12; jp += 12) {
                                     ipmnjpl0 = ipmn + jpl0;
+                                    ipmnjpl1 = ipmn + jpl1;
+                                    ipmnjpl2 = ipmn + jpl2;
                                     klnjpl0 = kln + jpl0;
-                                    b_v0 = _mm256_load_si256(B + klnjpl0);
-                                    c_v0 = _mm256_load_si256(C + ipmnjpl0);
+                                    klnjpl1 = kln + jpl1;
+                                    klnjpl2 = kln + jpl2;
+                                    b_v0 = _mm256_load_si256((__m256i*)(B + klnjpl0));
+                                    b_v1 = _mm256_load_si256((__m256i*)(B + klnjpl1));
+                                    b_v2 = _mm256_load_si256((__m256i*)(B + klnjpl2));
+                                    c_v0 = _mm256_load_si256((__m256i*)(C + ipmnjpl0));
+                                    c_v1 = _mm256_load_si256((__m256i*)(C + ipmnjpl1));
+                                    c_v2 = _mm256_load_si256((__m256i*)(C + ipmnjpl2));
                                     apb_v0 = _mm256_and_si256(a_v, b_v0);
+                                    apb_v1 = _mm256_and_si256(a_v, b_v1);
+                                    apb_v2 = _mm256_and_si256(a_v, b_v2);
                                     res0 = _mm256_or_si256(c_v0, apb_v0);
-                                    _mm256_store_si256(C + ipmnjpl0, res0);
-                                    jpl0 += 4;
+                                    res1 = _mm256_or_si256(c_v1, apb_v1);
+                                    res2 = _mm256_or_si256(c_v2, apb_v2);
+                                    _mm256_store_si256((__m256i*)(C + ipmnjpl0), res0);
+                                    _mm256_store_si256((__m256i*)(C + ipmnjpl1), res1);
+                                    _mm256_store_si256((__m256i*)(C + ipmnjpl2), res2);
+                                    jpl0 += 12;
+                                    jpl1 += 12;
+                                    jpl2 += 12;
                                 }
 
                                 for(; jp < j + Bj; ++jp) {
@@ -218,12 +273,14 @@ void opt_tiled(uint64_t* A, uint64_t* B, uint64_t* C, int L1, int n, int Bi, int
                         
                         uint64_t *C_i, *B_k;
                         int jp0; int jpsubo0; __m256i c_v0; __m256i b_v0; __m256i apb_v0; __m256i cmp_lt0; __m256i res0; uint64_t *B_k_j0; uint64_t *C_i_j0; 
+                        int jp1; int jpsubo1; __m256i c_v1; __m256i b_v1; __m256i apb_v1; __m256i cmp_lt1; __m256i res1; uint64_t *B_k_j1; uint64_t *C_i_j1; 
+                        int jp2; int jpsubo2; __m256i c_v2; __m256i b_v2; __m256i apb_v2; __m256i cmp_lt2; __m256i res2; uint64_t *B_k_j2; uint64_t *C_i_j2; 
 
                         for(int i = 0; i < L1; i += Bi) {
                             iBi = i + Bi;
                             for(int j = 0; j < L1; j += Bj) {
                                 jBj = j + Bj;
-                                jBj4 = jBj - 4;
+                                jBj4 = jBj - 12;
                                 for(int k = 0; k < L1; k += Bk) {
                                     kBk = k + Bk;
                                     for(int kp = k; kp < kBk; ++kp) {
@@ -237,15 +294,31 @@ void opt_tiled(uint64_t* A, uint64_t* B, uint64_t* C, int L1, int n, int Bi, int
                                             uint64_t aa = A[ipsubmn + kpsubl];
                                             a_v = _mm256_set_epi64x(aa, aa, aa, aa);
                                             jpsubo0 = (sub_base_o + 0);
+                                            jpsubo1 = (sub_base_o + 4);
+                                            jpsubo2 = (sub_base_o + 8);
 
-                                            for(; jp <= jBj4; jp += 4) {
+                                            for(; jp <= jBj4; jp += 12) {
                                                 B_k_j0 = B_k + jpsubo0; C_i_j0 = C_i + jpsubo0;
-                                                b_v0 = _mm256_load_si256(B_k_j0);
-                                                c_v0 = _mm256_load_si256(C_i_j0);
+                                                B_k_j1 = B_k + jpsubo1; C_i_j1 = C_i + jpsubo1;
+                                                B_k_j2 = B_k + jpsubo2; C_i_j2 = C_i + jpsubo2;
+                                                b_v0 = _mm256_load_si256((__m256i*)(B_k_j0));
+                                                b_v1 = _mm256_load_si256((__m256i*)(B_k_j1));
+                                                b_v2 = _mm256_load_si256((__m256i*)(B_k_j2));
+                                                c_v0 = _mm256_load_si256((__m256i*)(C_i_j0));
+                                                c_v1 = _mm256_load_si256((__m256i*)(C_i_j1));
+                                                c_v2 = _mm256_load_si256((__m256i*)(C_i_j2));
                                                 apb_v0 = _mm256_and_si256(a_v, b_v0);
+                                                apb_v1 = _mm256_and_si256(a_v, b_v1);
+                                                apb_v2 = _mm256_and_si256(a_v, b_v2);
                                                 res0 = _mm256_or_si256(c_v0, apb_v0);
-                                                _mm256_store_si256(C_i_j0, res0);
-                                                jpsubo0+=4;
+                                                res1 = _mm256_or_si256(c_v1, apb_v1);
+                                                res2 = _mm256_or_si256(c_v2, apb_v2);
+                                                _mm256_store_si256((__m256i*)(C_i_j0), res0);
+                                                _mm256_store_si256((__m256i*)(C_i_j1), res1);
+                                                _mm256_store_si256((__m256i*)(C_i_j2), res2);
+                                                jpsubo0+=12;
+                                                jpsubo1+=12;
+                                                jpsubo2+=12;
                                             }
 
                                             for(; jp < j + Bj; ++jp) {
@@ -367,16 +440,10 @@ double benchmark_tiled_timed(int n, void (*baseline)(uint64_t*, uint64_t*, uint6
 
     double base = rdtsc_generalized(C_base, C_base, C_base, n, baseline);
 
-    printf(" %f \n ", base);
-
     double time = rdtsc_tiled(C_opt, C_opt, C_opt, n, L1, Bi, Bj, Bk, compute);
 
-    printf(" %f \n ", time);
-
-    // Compare both 
-    for(int i = 0; i < n*n; ++i) {
-        assert(abs(C_opt[i] - C_base[i]) <= epsilon);
-    }
+    printf("%f\n", time);
+    printf("%f\n", base);
 
     free(C_base);
     free(C_opt);

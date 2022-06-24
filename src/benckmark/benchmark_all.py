@@ -20,9 +20,9 @@ def run_benchmark(generated: bool, fwi: int, n: int, l1: int, b: int):
     for i in range(repetitions_for_confidence):
         if generated:
             if n < 216:     # If small N, run without unrolling
-                file_name = "vectorized_tiled_floyd.c"
+                file_name = "../vectorized_tiled_floyd.c"
                 file_abs_path = os.path.join(THIS_FOLDER, file_name)
-                run("gcc -o ffw1 " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", shell=True)
+                run("gcc -o ffw1 " + file_abs_path + " ../tsc_x86.h -march=native -O3 -ffast-math", shell=True)
                 output = run("%s %d %d %d %d" % (os.path.join(THIS_FOLDER, "ffw1"), n, fwi, l1, b), capture_output=True,
                              shell=True).stdout.decode("utf-8")
             else:
@@ -55,7 +55,7 @@ def set_up(file_name: string, generated: bool):
 
     if not generated:
         file_abs_path = os.path.join(THIS_FOLDER, file_name)
-        run("gcc -o ffw " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", shell=True)
+        run("gcc -o ffw " + file_abs_path + " ../tsc_x86.h -march=native -O3 -ffast-math", shell=True)
     fwi = -1
 
     config_file: str = sys.argv[1]
@@ -69,7 +69,7 @@ def set_up(file_name: string, generated: bool):
                 if generated:
                     file_name = fw[fwi]+"_generated_vectorized_tiled.c"
                     file_abs_path = os.path.join(THIS_FOLDER, file_name)
-                    run("gcc -o ffw " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", shell=True)
+                    run("gcc -o ffw " + file_abs_path + " ../tsc_x86.h -march=native -O3 -ffast-math", shell=True)
 
                 with open(csv_file, "a") as res_dump_file:
                     res_dump_file.write(str(fw[fwi]) + " " + file_name + "\n")
@@ -84,7 +84,7 @@ def set_up(file_name: string, generated: bool):
 
 def benchmark_baseline_intermediate(file_name: string):
     file_abs_path = os.path.join(THIS_FOLDER, file_name)
-    run("gcc -o ffw " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", shell=True)
+    run("gcc -o ffw " + file_abs_path + " ../tsc_x86.h -march=native -O3 -ffast-math", shell=True)
 
     for impl in range(2):
         for fwi in range(semi_rings):
@@ -120,17 +120,17 @@ def benchmark_baseline_intermediate(file_name: string):
 def run_generator():
     for fwi in range(semi_rings):
         # Generate unrolled code for each semi-ring
-        run("python3 generator/generator.py " + str(fwi), shell=True)
+        run("python3 ../generator/generator.py " + str(fwi), shell=True)
 
 
 # Benchmark baseline and basic optimization
-benchmark_baseline_intermediate("basic_optimizations_floyd.c")
+# benchmark_baseline_intermediate("../basic_optimizations_floyd.c")
 
 # Benchmark tiled version
-set_up("tiled_floyd.c", False)
+# set_up("../tiled_floyd.c", False)
 
 # Benchmark tiled-vectorized version
-set_up("vectorized_tiled_floyd.c", False)
+# set_up("../vectorized_tiled_floyd.c", False)
 
 # Benchmark generated unrolled tiled-vectorized version
 run_generator()

@@ -5,7 +5,7 @@ from platform import system
 compiled_file = "ffw" + (".exe " if system() == "Windows" else ".out")  # do not remove space
 
 repetitions_for_confidence = 1  # number of repetitions of each n, median is taken
-file_name = "vectorized_tiled_floyd.c"
+file_name = "../vectorized_tiled_floyd.c"
 
 THIS_FOLDER = os.path.dirname(os.path.abspath(__file__))
 file_abs_path = os.path.join(THIS_FOLDER, file_name)
@@ -13,7 +13,7 @@ executable_abs_path = os.path.join(THIS_FOLDER, "ffw")
 
 fw = ["min_plus", "max_min", "or_and"]  # functions in generalized floyd warshall
 
-run("gcc -o ffw " + file_abs_path + " tsc_x86.h -march=native -O3 -ffast-math", shell=True)
+run("gcc -o ffw " + file_abs_path + " ../tsc_x86.h -march=native -O3 -ffast-math", shell=True)
 
 MIN_N = 8
 MAX_N = (2**12)
@@ -23,6 +23,9 @@ MIN_B = 2
 MAX_B = 400
 
 for fwi in range(3):
+    with open("autotuned_parameters.csv", "a") as best_res_dump_file:
+        best_res_dump_file.write(fw[fwi] + "\n")
+
     print("Benchmarking " + str(fw[fwi]))
     tmp_cycles = 0.0
     res = []
@@ -77,7 +80,7 @@ for fwi in range(3):
                 best_config_for_n = (tmp_l1, tmp_b)
 
         # Write the best results to a file in case of crash
-        with open("best_result_dump.csv", "a") as best_res_dump_file:
+        with open("autotuned_parameters.csv", "a") as best_res_dump_file:
             (best_l1_for_n, best_b_for_n) = best_config_for_n
             best_res_dump_file.write("%d, %d, %d, %lf\n" % (n, best_l1_for_n, best_b_for_n, best_flops_for_n))
 
@@ -114,8 +117,3 @@ for fwi in range(3):
     # Write the final best_n to the array
     best_l1, best_b = cur_best_config
     bestRes.append((cur_n, best_l1, best_b, best_flops))
-
-    # Write all best results to a separate file
-    with open("best_results.csv", "w") as best_res_file:
-        for (best_n, best_l1, best_b, final_flops) in bestRes:
-            best_res_file.write("%s, %d, %d, %d, %lf\n" % (fw[fwi], best_n, best_l1, best_b, final_flops))

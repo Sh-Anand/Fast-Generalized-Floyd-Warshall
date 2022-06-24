@@ -14,7 +14,7 @@ program = '''
 #include <string.h>
 
 #ifdef __x86_64__
-#include "tsc_x86.h"
+#include "../tsc_x86.h"
 #endif
 
 #define NUM_RUNS 1
