@@ -5,7 +5,7 @@ import writer
 import writer_or_and
 import matplotlib.pyplot as plt
 
-config_file = "best_result_dump_new.csv"
+config_file = "../autotuning/autotuned_parameters.csv"
 fw = ["min_plus", "max_min", "or_and"]
 
 

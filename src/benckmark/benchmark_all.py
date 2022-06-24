@@ -124,13 +124,13 @@ def run_generator():
 
 
 # Benchmark baseline and basic optimization
-# benchmark_baseline_intermediate("../basic_optimizations_floyd.c")
+benchmark_baseline_intermediate("../basic_optimizations_floyd.c")
 
 # Benchmark tiled version
-# set_up("../tiled_floyd.c", False)
+set_up("../tiled_floyd.c", False)
 
 # Benchmark tiled-vectorized version
-# set_up("../vectorized_tiled_floyd.c", False)
+set_up("../vectorized_tiled_floyd.c", False)
 
 # Benchmark generated unrolled tiled-vectorized version
 run_generator()
